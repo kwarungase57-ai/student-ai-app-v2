@@ -4,20 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Student Performance Predictor</title>
-    <!-- Add Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
         .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; }
         label { display: block; margin-top: 1rem; font-weight: 600; color: #34495e; }
-        input { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
         button:hover { background: #2980b9; }
         #result { margin-top: 1.5rem; padding: 1rem; background: #e8f6f3; border-radius: 6px; display: none; }
         #error { margin-top: 1rem; padding: 1rem; background: #fdedec; border-radius: 6px; color: #e74c3c; display: none; }
-        
-        /* New Chart Styles */
         .chart-container { margin-top: 2rem; padding: 1rem; background: #fff; border-radius: 8px; border: 1px solid #eee; }
         h2 { text-align: center; color: #2c3e50; font-size: 1.2rem; margin-bottom: 1rem; }
     </style>
@@ -27,6 +24,19 @@
         <h1>🎓 AI Study Predictor</h1>
         <p style="text-align:center; color:#7f8c8d;">Get personalized performance predictions</p>
         
+        <!-- ✅ NEW: Class Selection Layer -->
+        <label for="student_class">Select Class / Grade</label>
+        <select id="student_class">
+            <option value="" disabled selected>-- Choose your class --</option>
+            <option value="Class 6">Class 6</option>
+            <option value="Class 7">Class 7</option>
+            <option value="Class 8">Class 8</option>
+            <option value="Class 9">Class 9</option>
+            <option value="Class 10">Class 10</option>
+            <option value="Class 11">Class 11</option>
+            <option value="Class 12">Class 12</option>
+        </select>
+
         <label for="study_hours">Weekly Study Hours</label>
         <input type="number" id="study_hours" placeholder="e.g., 10" min="0">
         
@@ -47,7 +57,6 @@
         <div id="result"></div>
         <div id="error"></div>
 
-        <!-- New Chart Section -->
         <div class="chart-container">
             <h2>📈 Your Progress History</h2>
             <canvas id="progressChart"></canvas>
@@ -55,7 +64,7 @@
     </div>
 
     <script>
-    let myChart = null; // Store chart instance to update it later
+    let myChart = null;
 
     async function predict() {
         const resultDiv = document.getElementById('result');
@@ -63,19 +72,22 @@
         resultDiv.style.display = 'none';
         errorDiv.style.display = 'none';
 
+        // Get ALL values including class
+        const studentClass = document.getElementById('student_class').value;
         const studyHours = parseFloat(document.getElementById('study_hours').value);
         const attendance = parseFloat(document.getElementById('attendance').value);
         const mathScore = parseFloat(document.getElementById('math_score').value);
         const scienceScore = parseFloat(document.getElementById('science_score').value);
         const englishScore = parseFloat(document.getElementById('english_score').value);
 
-        if (isNaN(studyHours) || isNaN(attendance) || isNaN(mathScore) || isNaN(scienceScore) || isNaN(englishScore)) {
-            errorDiv.textContent = "Please fill in ALL fields with valid numbers.";
+        if (!studentClass || isNaN(studyHours) || isNaN(attendance) || isNaN(mathScore) || isNaN(scienceScore) || isNaN(englishScore)) {
+            errorDiv.textContent = "Please fill in ALL fields including Class selection.";
             errorDiv.style.display = 'block';
             return;
         }
 
         const payload = {
+            student_class: studentClass,
             study_hours: studyHours,
             attendance: attendance,
             math_score: mathScore,
@@ -92,23 +104,18 @@
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.detail || 'Prediction failed');
-            }
+            if (!response.ok) throw new Error(data.detail || 'Prediction failed');
 
             resultDiv.innerHTML = `
                 <h3> Prediction: ${data.performance_level}</h3>
                 <p><strong>Confidence:</strong> ${data.confidence}%</p>
-                ${data.weak_subjects.length > 0 ? 
-                    `<p><strong>⚠️ Weak Areas:</strong> ${data.weak_subjects.join(', ')}</p>` : ''}
+                ${data.weak_subjects.length > 0 ? `<p><strong>⚠️ Weak Areas:</strong> ${data.weak_subjects.join(', ')}</p>` : ''}
                 <div style="margin-top:1rem; text-align:left;">
                     <strong>💡 Recommendations:</strong>
                     <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
                 </div>
             `;
             resultDiv.style.display = 'block';
-            
-            // Refresh chart after prediction
             loadChart(); 
 
         } catch (err) {
@@ -117,22 +124,15 @@
         }
     }
 
-    // Function to Load and Draw Chart
     async function loadChart() {
         try {
             const response = await fetch('/history');
             const historyData = await response.json();
-            
-            // Reverse data so oldest is on left
-            const labels = historyData.map(r => new Date(r.timestamp).toLocaleDateString()).reverse();
-            const scores = historyData.map(r => r.math_score).reverse(); // Using Math score as proxy for performance
+            const labels = historyData.map(r => `${new Date(r.timestamp).toLocaleDateString()} (${r.student_class})`).reverse();
+            const scores = historyData.map(r => r.math_score).reverse();
 
             const ctx = document.getElementById('progressChart').getContext('2d');
-            
-            // Destroy old chart if exists to prevent overlapping
-            if (myChart) {
-                myChart.destroy();
-            }
+            if (myChart) myChart.destroy();
 
             myChart = new Chart(ctx, {
                 type: 'line',
@@ -147,19 +147,10 @@
                         fill: true
                     }]
                 },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: { beginAtZero: true, max: 100 }
-                    }
-                }
+                options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
             });
-        } catch (err) {
-            console.error("Failed to load chart:", err);
-        }
+        } catch (err) { console.error("Failed to load chart:", err); }
     }
-
-    // Load chart when page opens
     window.onload = loadChart;
     </script>
 </body>

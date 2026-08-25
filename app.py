@@ -6,32 +6,27 @@ import numpy as np
 import os
 from database import SessionLocal, StudentRecord, init_db
 
-# Initialize App & Database
 app = FastAPI(title="AI Student Performance Predictor")
 init_db()
 
-# Load Trained Model
 MODEL_PATH = "student_model.pkl"
 model = None
-
 try:
     if os.path.exists(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
         print("✅ Model loaded successfully")
-    else:
-        print(f"⚠️ Warning: {MODEL_PATH} not found! Training will occur on next build.")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
 
-# Input Schema (Must match train_model.py exactly)
+# ✅ UPDATED: Added student_class as first field
 class StudentInput(BaseModel):
+    student_class: str
     study_hours: float
     attendance: float
     math_score: float
     science_score: float
     english_score: float
 
-# Serve Frontend
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     if os.path.exists("index.html"):
@@ -39,51 +34,49 @@ async def serve_frontend():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Frontend not found</h1>", status_code=404)
 
-# Prediction + Recommendation Endpoint
 @app.post("/predict")
 async def predict(data: StudentInput):
     if model is None:
         raise HTTPException(status_code=500, detail="Model failed to load")
     
     try:
-        # 1. Prepare Features (ORDER MUST MATCH TRAINING DATA)
+        # Encode class to number for model (6->6, 10->10, etc.)
+        class_num = int(data.student_class.replace("Class ", ""))
+        
         features = np.array([[
-            data.study_hours, 
-            data.attendance, 
-            data.math_score, 
-            data.science_score, 
-            data.english_score
+            class_num,           # 1. Class
+            data.study_hours,    # 2. Hours
+            data.attendance,     # 3. Attendance
+            data.math_score,     # 4. Math
+            data.science_score,  # 5. Science
+            data.english_score   # 6. English
         ]])
         
-        # 2. Predict Performance Level
         prediction = model.predict(features)[0]
         confidence = float(max(model.predict_proba(features)[0]))
         
-        # 3. Generate Personalized Recommendations
         recommendations = []
         weak_subjects = []
-        
         if data.math_score < 60:
             weak_subjects.append("Mathematics")
-            recommendations.append("📐 Math: Practice 30 mins daily using Khan Academy")
+            recommendations.append(" Math: Practice 30 mins daily")
         if data.science_score < 60:
             weak_subjects.append("Science")
-            recommendations.append(" Science: Focus on conceptual diagrams & flashcards")
+            recommendations.append("🔬 Science: Use visual diagrams")
         if data.english_score < 60:
             weak_subjects.append("English")
-            recommendations.append(" English: Read 1 article daily & summarize it")
+            recommendations.append("📚 English: Read daily articles")
         if data.study_hours < 5:
-            recommendations.append("⏰ Time: Increase study time to 5+ hours/week")
+            recommendations.append("⏰ Increase study time to 5+ hrs/week")
         if data.attendance < 75:
-            recommendations.append("🎓 Attendance: Aim for 85%+ to improve retention")
-            
+            recommendations.append("🎓 Aim for 85%+ attendance")
         if not recommendations:
-            recommendations.append("🌟 Excellent progress! Maintain your current routine.")
+            recommendations.append("🌟 Excellent! Maintain routine.")
         
-        # 4. Save Record to Database
         db = SessionLocal()
         try:
             record = StudentRecord(
+                student_class=data.student_class,
                 study_hours=data.study_hours,
                 attendance=data.attendance,
                 math_score=data.math_score,
@@ -96,34 +89,20 @@ async def predict(data: StudentInput):
         finally:
             db.close()
         
-        # 5. Return Response
         return {
             "performance_level": prediction,
             "confidence": round(confidence * 100, 1),
             "weak_subjects": weak_subjects,
             "recommendations": recommendations
         }
-        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# History Endpoint for Charts
 @app.get("/history")
 async def get_history():
     db = SessionLocal()
     try:
-        records = db.query(StudentRecord).order_by(
-            StudentRecord.timestamp.desc()
-        ).limit(20).all()
-        
-        return [
-            {
-                "timestamp": r.timestamp.isoformat(),
-                "performance_level": r.performance_level,
-                "math_score": r.math_score,
-                "study_hours": r.study_hours
-            } 
-            for r in records
-        ]
+        records = db.query(StudentRecord).order_by(StudentRecord.timestamp.desc()).limit(20).all()
+        return [{"timestamp": r.timestamp.isoformat(), "student_class": r.student_class, "math_score": r.math_score} for r in records]
     finally:
         db.close()
