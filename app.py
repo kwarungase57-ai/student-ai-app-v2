@@ -5,10 +5,10 @@ import joblib
 import numpy as np
 import os
 
-app = FastAPI()
+app = FastAPI(title="Student AI Predictor")
 
-# 1. Load Model (Only once at startup)
-MODEL_PATH = "student_model.pkl"  # <--- CHANGE THIS to your actual model filename
+# Load Model
+MODEL_PATH = "student_model.pkl"  # ⚠️ CHANGE THIS to your actual model filename
 model = None
 
 try:
@@ -20,14 +20,14 @@ try:
 except Exception as e:
     print(f"❌ Error loading model: {e}")
 
-# 2. Define Input Data Structure (Match your model's inputs exactly)
+# Input Schema - MUST match your training data columns
 class StudentInput(BaseModel):
     study_hours: float
     attendance: float
     previous_score: float
-    # Add/Remove fields here to match YOUR model exactly!
+    # Add more fields here if your model uses them!
 
-# 3. Serve Frontend
+# Serve Frontend
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     if os.path.exists("index.html"):
@@ -35,19 +35,19 @@ async def serve_frontend():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
 
-# 4. Prediction Endpoint
+# Prediction Endpoint
 @app.post("/predict")
 async def predict(data: StudentInput):
     if model is None:
         raise HTTPException(status_code=500, detail="Model failed to load")
     
     try:
-        # Convert input to array [Must match training order!]
+        # Convert to array - ORDER MUST MATCH TRAINING DATA
         features = np.array([[
             data.study_hours, 
             data.attendance, 
             data.previous_score
-            # Add more variables here if your model needs them
+            # Add more variables here if needed
         ]])
         
         prediction = model.predict(features)

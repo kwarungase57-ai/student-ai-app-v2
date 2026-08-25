@@ -4,173 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Student Performance Predictor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; }
+        label { display: block; margin-top: 1rem; font-weight: 600; color: #34495e; }
+        input { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+        button:hover { background: #2980b9; }
+        #result { margin-top: 1.5rem; padding: 1rem; background: #e8f6f3; border-radius: 6px; text-align: center; font-size: 1.2rem; color: #27ae60; display: none; }
+        #error { margin-top: 1rem; padding: 1rem; background: #fdedec; border-radius: 6px; text-align: center; color: #e74c3c; display: none; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 md:p-8">
-
-    <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">🎓 AI Study Predictor & Tracker</h1>
-        <p class="text-gray-500 mb-8">Get personalized recommendations and track your progress over time.</p>
+<body>
+    <div class="container">
+        <h1>🎓 AI Study Predictor</h1>
+        <p style="text-align:center; color:#7f8c8d;">Get personalized performance predictions</p>
         
-        <div class="grid md:grid-cols-2 gap-8">
-            <!-- Left Side: Input Form -->
-            <div>
-                <form id="predictionForm" class="space-y-4 bg-gray-50 p-6 rounded-xl">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Weekly Study Hours</label>
-                        <input type="number" id="study_hours" value="10" min="0" max="40" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Attendance (%)</label>
-                        <input type="number" id="attendance" value="85" min="0" max="100" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Previous Test Score (%)</label>
-                        <input type="number" id="prev_score" value="70" min="0" max="100" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Assignments Completed (out of 10)</label>
-                        <input type="number" id="assignments" value="7" min="0" max="10" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <button type="submit" 
-                            class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow-md">
-                        Analyze Performance 🚀
-                    </button>
-                </form>
-            </div>
-
-            <!-- Right Side: Results & History -->
-            <div class="space-y-6">
-                <!-- Current Prediction Result -->
-                <div id="resultsSection" class="hidden">
-                    <div id="scoreCard" class="text-center p-6 rounded-xl shadow-inner mb-4 border-l-4">
-                        <p class="text-sm uppercase tracking-wide text-gray-500">Predicted Final Score</p>
-                        <h2 id="scoreText" class="text-5xl font-bold mt-2">0%</h2>
-                        <span id="levelBadge" class="inline-block mt-3 px-4 py-1 rounded-full text-white text-sm font-bold">Level</span>
-                    </div>
-                    
-                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                        <h3 class="font-bold text-blue-800 mb-2 flex items-center gap-2">💡 Smart Recommendation:</h3>
-                        <p id="recommendationText" class="text-blue-900 text-sm leading-relaxed"></p>
-                    </div>
-                </div>
-
-                <!-- Progress History Chart -->
-                <div class="bg-gray-50 p-4 rounded-xl">
-                    <h3 class="font-bold text-gray-800 mb-4">📈 Recent Prediction History</h3>
-                    <div class="h-48">
-                        <canvas id="historyChart"></canvas>
-                    </div>
-                    <p id="noHistoryMsg" class="text-center text-gray-400 text-sm mt-4 hidden">No predictions yet. Make your first prediction above!</p>
-                </div>
-            </div>
-        </div>
+        <label for="study_hours">Weekly Study Hours</label>
+        <input type="number" id="study_hours" placeholder="e.g., 10" min="0">
+        
+        <label for="attendance">Attendance (%)</label>
+        <input type="number" id="attendance" placeholder="e.g., 85" min="0" max="100">
+        
+        <label for="previous_score">Previous Score (%)</label>
+        <input type="number" id="previous_score" placeholder="e.g., 75" min="0" max="100">
+        
+        <button onclick="predict()">Predict Performance</button>
+        
+        <div id="result"></div>
+        <div id="error"></div>
     </div>
 
     <script>
-        let historyChart;
+        async function predict() {
+            const resultDiv = document.getElementById('result');
+            const errorDiv = document.getElementById('error');
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
 
-        // Load history on page load
-        window.onload = loadHistory;
-
-        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const payload = {
+            const data = {
                 study_hours: parseFloat(document.getElementById('study_hours').value),
                 attendance: parseFloat(document.getElementById('attendance').value),
-                prev_score: parseFloat(document.getElementById('prev_score').value),
-                assignments: parseFloat(document.getElementById('assignments').value)
+                previous_score: parseFloat(document.getElementById('previous_score').value)
             };
 
+            // Validate inputs
+            if (isNaN(data.study_hours) || isNaN(data.attendance) || isNaN(data.previous_score)) {
+                errorDiv.textContent = "Please fill in all fields with valid numbers.";
+                errorDiv.style.display = 'block';
+                return;
+            }
+
             try {
-                const response = await fetch('http://127.0.0.1:8000/predict', {
+                // ✅ FIXED: Use relative path '/predict' instead of localhost
+                const response = await fetch('/predict', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(data)
                 });
-                const data = await response.json();
 
-                // Show results section
-                document.getElementById('resultsSection').classList.remove('hidden');
-                
-                // Update score card
-                const scoreText = document.getElementById('scoreText');
-                scoreText.innerText = data.score + '%';
-                scoreText.style.color = data.color;
-                
-                const scoreCard = document.getElementById('scoreCard');
-                scoreCard.style.borderLeftColor = data.color;
-                
-                const badge = document.getElementById('levelBadge');
-                badge.innerText = data.level;
-                badge.style.backgroundColor = data.color;
-                
-                // Update smart recommendation
-                document.getElementById('recommendationText').innerText = data.recommendation;
-
-                // Refresh history chart after new prediction
-                loadHistory();
-
-            } catch (error) {
-                alert("Error connecting to backend. Make sure uvicorn is running!");
-                console.error(error);
-            }
-        });
-
-        async function loadHistory() {
-            try {
-                const res = await fetch('http://127.0.0.1:8000/history');
-                const data = await res.json();
-
-                if (data.length === 0) {
-                    document.getElementById('noHistoryMsg').classList.remove('hidden');
-                    return;
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Prediction failed');
                 }
-                
-                document.getElementById('noHistoryMsg').classList.add('hidden');
-                
-                // Reverse array so oldest is first for the chart
-                const reversedData = [...data].reverse();
-                const labels = reversedData.map((_, i) => `#${i + 1}`);
-                const scores = reversedData.map(h => h.predicted_score);
 
-                const ctx = document.getElementById('historyChart').getContext('2d');
-                if (historyChart) historyChart.destroy();
-
-                historyChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Predicted Score',
-                            data: scores,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 4,
-                            pointBackgroundColor: '#3b82f6'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { 
-                            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Score (%)' } },
-                            x: { title: { display: true, text: 'Prediction #' } }
-                        }
-                    }
-                });
-
-            } catch(e) { 
-                console.log("Could not load history:", e); 
+                const result = await response.json();
+                resultDiv.innerHTML = `🎯 Predicted Score: <strong>${result.prediction}%</strong>`;
+                resultDiv.style.display = 'block';
+            } catch (err) {
+                errorDiv.textContent = `Error: ${err.message}`;
+                errorDiv.style.display = 'block';
             }
         }
     </script>
