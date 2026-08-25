@@ -1,6 +1,6 @@
-.venv/
-__pycache__/
-*.pyc
-predictions.db
-student_model.pkl
-.env
+fastapi
+uvicorn
+scikit-learn
+pandas
+numpy
+
