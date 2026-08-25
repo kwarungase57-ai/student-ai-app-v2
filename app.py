@@ -6,7 +6,7 @@ import numpy as np
 import os
 from database import SessionLocal, StudentRecord, init_db
 
-# Initialize FastAPI & Database
+# Initialize App & Database
 app = FastAPI(title="AI Student Performance Predictor")
 init_db()
 
@@ -19,11 +19,11 @@ try:
         model = joblib.load(MODEL_PATH)
         print("✅ Model loaded successfully")
     else:
-        print(f"⚠️ Warning: {MODEL_PATH} not found! Run train_model.py first.")
+        print(f"⚠️ Warning: {MODEL_PATH} not found! Training will occur on next build.")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
 
-# Input Schema (Must match training features exactly)
+# Input Schema (Must match train_model.py exactly)
 class StudentInput(BaseModel):
     study_hours: float
     attendance: float
@@ -46,7 +46,7 @@ async def predict(data: StudentInput):
         raise HTTPException(status_code=500, detail="Model failed to load")
     
     try:
-        # 1. Prepare Features
+        # 1. Prepare Features (ORDER MUST MATCH TRAINING DATA)
         features = np.array([[
             data.study_hours, 
             data.attendance, 
@@ -71,7 +71,7 @@ async def predict(data: StudentInput):
             recommendations.append(" Science: Focus on conceptual diagrams & flashcards")
         if data.english_score < 60:
             weak_subjects.append("English")
-            recommendations.append("📚 English: Read 1 article daily & summarize it")
+            recommendations.append(" English: Read 1 article daily & summarize it")
         if data.study_hours < 5:
             recommendations.append("⏰ Time: Increase study time to 5+ hours/week")
         if data.attendance < 75:
