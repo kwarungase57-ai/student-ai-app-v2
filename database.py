@@ -16,7 +16,6 @@ class StudentRecord(Base):
     __tablename__ = "student_records"
     id = Column(Integer, primary_key=True, index=True)
     student_class = Column(String, nullable=False)
-    career_stream = Column(String, nullable=False)
     study_hours = Column(Float, nullable=False)
     math_score = Column(Float, nullable=False)
     science_score = Column(Float, nullable=False)
@@ -27,10 +26,3 @@ class StudentRecord(Base):
 def init_db():
     Base.metadata.create_all(bind=engine)
     print("✅ Database tables created/verified")
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

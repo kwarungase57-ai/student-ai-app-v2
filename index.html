@@ -39,15 +39,6 @@
             <option value="Class 12">Class 12</option>
         </select>
 
-        <label for="career_stream">Career Stream</label>
-        <select id="career_stream">
-            <option value="" disabled selected>-- Choose stream --</option>
-            <option value="Science">Science (PCM/PCB)</option>
-            <option value="Commerce">Commerce</option>
-            <option value="Arts">Arts / Humanities</option>
-            <option value="Vocational">Vocational</option>
-        </select>
-
         <label for="study_hours">Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
 
@@ -89,13 +80,12 @@
         ttSection.style.display = 'none';
 
         const studentClass = document.getElementById('student_class').value;
-        const careerStream = document.getElementById('career_stream').value;
         const studyHours = parseFloat(document.getElementById('study_hours').value);
         const mathTest = parseFloat(document.getElementById('math_test').value);
         const scienceTest = parseFloat(document.getElementById('science_test').value);
         const englishTest = parseFloat(document.getElementById('english_test').value);
 
-        if (!studentClass || !careerStream || isNaN(studyHours) || isNaN(mathTest) || isNaN(scienceTest) || isNaN(englishTest)) {
+        if (!studentClass || isNaN(studyHours) || isNaN(mathTest) || isNaN(scienceTest) || isNaN(englishTest)) {
             errorDiv.textContent = "Please fill in ALL fields.";
             errorDiv.style.display = 'block';
             return;
@@ -107,7 +97,6 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     student_class: studentClass,
-                    career_stream: careerStream,
                     study_hours: studyHours,
                     math_score: mathTest,
                     science_score: scienceTest,

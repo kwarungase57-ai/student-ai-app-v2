@@ -21,7 +21,6 @@ except Exception as e:
 
 class StudentInput(BaseModel):
     student_class: str
-    career_stream: str
     study_hours: float
     math_score: float
     science_score: float
@@ -36,7 +35,7 @@ async def serve_frontend():
     return HTMLResponse(content="<h1>Frontend not found</h1>", status_code=404)
 
 
-def generate_timetable(study_hours, math, science, english, stream):
+def generate_timetable(study_hours, math, science, english):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     scores = {"Math": math, "Science": science, "English": english}
     total_gap = sum(max(0, 100 - s) for s in scores.values())
@@ -46,13 +45,6 @@ def generate_timetable(study_hours, math, science, english, stream):
     else:
         weights = {subj: max(0, 100 - score) / total_gap for subj, score in scores.items()}
 
-    stream_tasks = {
-        "Science": ["Physics Practice", "Chemistry Revision"],
-        "Commerce": ["Accounting Problems", "Business Studies"],
-        "Arts": ["History Notes", "Political Science"],
-        "Vocational": ["Practical Skills", "Workshop Practice"]
-    }
-    extra_tasks = stream_tasks.get(stream, ["General Revision"])
     daily_hours = study_hours / 7
     timetable = []
 
@@ -67,8 +59,8 @@ def generate_timetable(study_hours, math, science, english, stream):
                 if hrs >= 0.5:
                     emoji = {"Math": "📐", "Science": "🔬", "English": "📚"}[subj]
                     tasks.append(f"{emoji} {subj} ({hrs}h)")
-            if i % 2 == 0 and extra_tasks:
-                tasks.append(f"📘 {extra_tasks[i % len(extra_tasks)]} (0.5h)")
+            if i % 2 == 0:
+                tasks.append("📘 General Revision (0.5h)")
             tasks.append("✏️ Homework / Assignments")
         timetable.append({"day": day, "tasks": tasks})
     return timetable
@@ -81,11 +73,9 @@ async def predict(data: StudentInput):
 
     try:
         class_num = int(data.student_class.replace("Class ", ""))
-        stream_map = {"Science": 1, "Commerce": 2, "Arts": 3, "Vocational": 4}
-        stream_num = stream_map.get(data.career_stream, 0)
 
         features = np.array([[
-            class_num, stream_num, data.study_hours,
+            class_num, data.study_hours,
             data.math_score, data.science_score, data.english_score
         ]])
 
@@ -128,15 +118,13 @@ async def predict(data: StudentInput):
             recommendations.append("🌟 Excellent diagnostic scores! Focus on advanced problems & revision")
 
         timetable = generate_timetable(
-            data.study_hours, data.math_score, data.science_score,
-            data.english_score, data.career_stream
+            data.study_hours, data.math_score, data.science_score, data.english_score
         )
 
         db = SessionLocal()
         try:
             record = StudentRecord(
                 student_class=data.student_class,
-                career_stream=data.career_stream,
                 study_hours=data.study_hours,
                 math_score=data.math_score,
                 science_score=data.science_score,
@@ -171,4 +159,4 @@ async def get_history():
             "science_score": r.science_score
         } for r in records]
     finally:
-        db.close()  
+        db.close()
