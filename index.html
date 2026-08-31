@@ -22,11 +22,18 @@
         #result { background: #e8f6f3; border-left: 4px solid #27ae60; }
         #timetable-section { background: #ebf5fb; border-left: 4px solid #3498db; }
         #error { background: #fdedec; border-left: 4px solid #e74c3c; color: #c0392b; }
-        .timetable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 1rem; }
-        .day-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #d4e6f1; text-align: center; }
-        .day-card h4 { margin: 0 0 8px 0; color: #2980b9; font-size: 0.9rem; }
-        .day-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
-        .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
+        .timetable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 1rem; }
+        .day-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #d4e6f1; }
+        .day-card h4 { margin: 0 0 8px 0; color: #2980b9; font-size: 0.9rem; text-align: center; }
+        .day-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #555; }
+        .day-card li { padding: 4px 0; border-bottom: 1px dashed #eee; }
+        .task-text { cursor: pointer; }
+        .done-task .task-text { text-decoration: line-through; opacity: 0.55; }
+        .task-controls { float: right; }
+        .mini-btn { width: auto; padding: 0 3px; margin: 0; background: none; border: none; color: inherit; font-size: 0.75rem; cursor: pointer; }
+        .mini-btn:hover { background: none; opacity: 0.7; }
+        .add-btn { width: 100%; padding: 4px; margin-top: 6px; background: #eafaf1; color: #27ae60; border: 1px dashed #27ae60; border-radius: 4px; font-size: 0.75rem; }
+        .add-btn:hover { background: #d5f5e3; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         #layer2 { display: none; }
         #radar-section { display: none; }
@@ -39,7 +46,8 @@
         .doubt-row input { flex: 1; }
         .mic-btn { width: 60px; flex-shrink: 0; margin-top: 0.5rem; background: #e74c3c; }
         .mic-btn:hover { background: #c0392b; }
-        /* ✅ PRINT / PDF STYLES */
+        .tt-actions { display: flex; gap: 8px; margin-top: 1rem; }
+        .tt-actions button { margin-top: 0; }
         @media print {
             body { background: white; margin: 0; }
             .layer:not(.printable) { display: none !important; }
@@ -55,10 +63,8 @@
     <div class="layer">
         <div class="layer-title"><div class="step-badge">1</div><h2 style="margin:0;">Student Profile</h2></div>
         <p class="layer-subtitle">Enter name, board and class (stream appears for Class 11–12)</p>
-
         <label for="student_name">🙋 Student Name</label>
         <input type="text" id="student_name" placeholder="e.g., Rahul Sharma">
-
         <label for="board">Board</label>
         <select id="board" onchange="resetLayer2()">
             <option value="" disabled selected>-- Choose board --</option>
@@ -88,30 +94,36 @@
         <p class="layer-subtitle" id="layer2-subtitle"></p>
         <label for="study_hours">Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
+        <label for="start_time">⏰ Daily Study Start Time</label>
+        <input type="time" id="start_time" value="16:00">
         <div id="subject_inputs"></div>
         <button onclick="analyze()">Analyze & Generate Timetable</button>
     </div>
 
-    <!-- RESULTS (printable) -->
     <div class="layer printable">
         <div id="error" class="section"></div>
         <div id="result" class="section"></div>
     </div>
 
-    <!-- RADAR CHART (printable) -->
     <div class="layer printable" id="radar-section">
         <h2>🕸️ Subject Strength Radar</h2>
         <canvas id="radarChart"></canvas>
     </div>
 
-    <!-- TIMETABLE (printable) -->
+    <!-- ✅ CUSTOMIZABLE TIMETABLE -->
     <div class="layer printable" id="timetable-section" style="display:none;">
         <h2>📅 Personalized Study Timetable</h2>
-        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker subjects</p>
+        <p style="text-align:center; color:#7f8c8d; font-size:0.8rem;">
+            Tap a task to mark ✅ done • ✏️ edit • ✕ remove • + add your own (coaching, sports, etc.)
+        </p>
         <div class="timetable-grid" id="timetable-grid"></div>
+        <div class="tt-actions no-print">
+            <button onclick="saveTimetable()" style="background:#27ae60;">💾 Save My Timetable</button>
+            <button onclick="resetTimetable()" style="background:#95a5a6;">🔄 Reset to AI Plan</button>
+        </div>
     </div>
 
-    <!-- LAYER 3: AI DOUBT SOLVER -->
+    <!-- LAYER 3 -->
     <div class="layer">
         <div class="layer-title"><div class="step-badge">3</div><h2 style="margin:0;">🤖 Personal AI Doubt Solver</h2></div>
         <p class="layer-subtitle">Type OR speak 🎤 your doubt — answers tailored to your class & board</p>
@@ -133,6 +145,8 @@
     <script>
     let myChart = null;
     let myRadar = null;
+    let currentTimetable = null;  // [{day, tasks:[{text,done}]}]
+    let aiTimetable = null;       // last AI-generated version
     let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
 
     const EMOJIS = {
@@ -143,6 +157,8 @@
         "Economics": "📈", "History": "🏛️", "Political Science": "🗳️",
         "Geography": "🗺️"
     };
+
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     function getSubjects(board, cls, stream) {
         const c = parseInt(cls.replace("Class ", ""));
@@ -187,6 +203,15 @@
         studentContext.student_class = cls;
         studentContext.stream = stream;
 
+        // ✅ Load saved custom timetable if exists
+        const saved = localStorage.getItem('tt_' + name);
+        if (saved) {
+            try {
+                currentTimetable = JSON.parse(saved);
+                renderTimetable();
+            } catch (e) {}
+        }
+
         const subjects = getSubjects(board, cls, stream);
         document.getElementById('layer2-subtitle').textContent =
             `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
@@ -198,15 +223,80 @@
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
+    // ---------- ✅ TIMETABLE CUSTOMIZATION ----------
+    function toObj(tt) {
+        return tt.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) }));
+    }
+
+    function renderTimetable() {
+        const grid = document.getElementById('timetable-grid');
+        grid.innerHTML = currentTimetable.map((day, di) => `
+            <div class="day-card">
+                <h4>${day.day}</h4>
+                <ul>
+                    ${day.tasks.map((t, ti) => `
+                        <li class="${t.done ? 'done-task' : ''}">
+                            <span class="task-text" onclick="toggleTask(${di},${ti})">${t.done ? '✅' : '⬜'} ${escapeHtml(t.text)}</span>
+                            <span class="task-controls no-print">
+                                <button class="mini-btn" onclick="editTask(${di},${ti})" title="Edit">✏️</button>
+                                <button class="mini-btn" onclick="deleteTask(${di},${ti})" title="Remove">✕</button>
+                            </span>
+                        </li>
+                    `).join('')}
+                </ul>
+                <button class="add-btn no-print" onclick="addTask(${di})">+ Add task</button>
+            </div>
+        `).join('');
+        document.getElementById('timetable-section').style.display = 'block';
+    }
+
+    function toggleTask(di, ti) {
+        currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done;
+        renderTimetable();
+    }
+
+    function deleteTask(di, ti) {
+        currentTimetable[di].tasks.splice(ti, 1);
+        renderTimetable();
+    }
+
+    function editTask(di, ti) {
+        const cur = currentTimetable[di].tasks[ti].text;
+        const val = prompt("✏️ Edit task:", cur);
+        if (val !== null && val.trim()) {
+            currentTimetable[di].tasks[ti].text = val.trim();
+            renderTimetable();
+        }
+    }
+
+    function addTask(di) {
+        const val = prompt("➕ New task for " + currentTimetable[di].day + " (e.g., '🏏 Sports 5 PM'):", "");
+        if (val && val.trim()) {
+            currentTimetable[di].tasks.push({ text: val.trim(), done: false });
+            renderTimetable();
+        }
+    }
+
+    function saveTimetable() {
+        localStorage.setItem('tt_' + studentContext.name, JSON.stringify(currentTimetable));
+        alert("💾 Timetable saved for " + studentContext.name + "! It will load automatically next time.");
+    }
+
+    function resetTimetable() {
+        if (!aiTimetable) { alert("Generate an AI plan first!"); return; }
+        currentTimetable = toObj(aiTimetable);
+        localStorage.removeItem('tt_' + studentContext.name);
+        renderTimetable();
+    }
+
     async function analyze() {
         const resultDiv = document.getElementById('result');
         const errorDiv = document.getElementById('error');
-        const ttSection = document.getElementById('timetable-section');
         resultDiv.style.display = 'none';
         errorDiv.style.display = 'none';
-        ttSection.style.display = 'none';
 
         const studyHours = parseFloat(document.getElementById('study_hours').value);
+        const startTime = document.getElementById('start_time').value || "16:00";
         const subjectScores = {};
         let valid = true;
         document.querySelectorAll('.subject-score').forEach(inp => {
@@ -231,6 +321,7 @@
                     student_class: studentContext.student_class,
                     stream: studentContext.stream,
                     study_hours: studyHours,
+                    start_time: startTime,
                     subject_scores: subjectScores
                 })
             });
@@ -254,7 +345,6 @@
             `;
             resultDiv.style.display = 'block';
 
-            // ✅ RADAR CHART
             const radarSection = document.getElementById('radar-section');
             radarSection.style.display = 'block';
             const rctx = document.getElementById('radarChart').getContext('2d');
@@ -274,13 +364,11 @@
                 options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
             });
 
-            if (data.timetable && data.timetable.length > 0) {
-                document.getElementById('timetable-grid').innerHTML = data.timetable.map(day => `
-                    <div class="day-card"><h4>${day.day}</h4>
-                    <ul>${day.tasks.map(t => `<li>${t}</li>`).join('')}</ul></div>
-                `).join('');
-                ttSection.style.display = 'block';
-            }
+            // ✅ Set customizable timetable
+            aiTimetable = data.timetable;
+            currentTimetable = toObj(data.timetable);
+            renderTimetable();
+
             loadChart();
         } catch (err) {
             errorDiv.textContent = `Error: ${err.message}`;
@@ -288,7 +376,6 @@
         }
     }
 
-    // ✅ VOICE INPUT
     function startVoice() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) { alert("Voice input not supported in this browser. Please type your doubt."); return; }
@@ -307,7 +394,7 @@
         const q = input.value.trim();
         if (!q) return;
         const box = document.getElementById('chat-box');
-        box.innerHTML += `<div class="chat-msg user-msg">${q.replace(/</g,'&lt;')}</div>`;
+        box.innerHTML += `<div class="chat-msg user-msg">${escapeHtml(q)}</div>`;
         input.value = '';
         box.innerHTML += `<div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
         box.scrollTop = box.scrollHeight;
@@ -328,7 +415,7 @@
             const thinking = document.getElementById('thinking');
             if (thinking) thinking.remove();
             const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
-            box.innerHTML += `<div class="chat-msg ai-msg">${data.answer.replace(/</g,'&lt;')}<span class="src-tag">${src}</span></div>`;
+            box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
         } catch (err) {
             const thinking = document.getElementById('thinking');
             if (thinking) thinking.remove();
