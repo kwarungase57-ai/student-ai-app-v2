@@ -29,11 +29,23 @@
         .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         #layer2 { display: none; }
+        #radar-section { display: none; }
         #chat-box { max-height: 320px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
         .chat-msg { padding: 0.7rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
         .user-msg { background: #3498db; color: white; margin-left: auto; }
         .ai-msg { background: #ecf0f1; color: #2c3e50; }
         .src-tag { font-size: 0.7rem; color: #95a5a6; display: block; margin-top: 4px; }
+        .doubt-row { display: flex; gap: 8px; }
+        .doubt-row input { flex: 1; }
+        .mic-btn { width: 60px; flex-shrink: 0; margin-top: 0.5rem; background: #e74c3c; }
+        .mic-btn:hover { background: #c0392b; }
+        /* ✅ PRINT / PDF STYLES */
+        @media print {
+            body { background: white; margin: 0; }
+            .layer:not(.printable) { display: none !important; }
+            .no-print { display: none !important; }
+            .layer { box-shadow: none; border: 1px solid #ddd; }
+        }
     </style>
 </head>
 <body>
@@ -41,8 +53,12 @@
 
     <!-- LAYER 1 -->
     <div class="layer">
-        <div class="layer-title"><div class="step-badge">1</div><h2 style="margin:0;">Board, Class & Stream</h2></div>
-        <p class="layer-subtitle">Select your board and class (stream appears for Class 11–12)</p>
+        <div class="layer-title"><div class="step-badge">1</div><h2 style="margin:0;">Student Profile</h2></div>
+        <p class="layer-subtitle">Enter name, board and class (stream appears for Class 11–12)</p>
+
+        <label for="student_name">🙋 Student Name</label>
+        <input type="text" id="student_name" placeholder="e.g., Rahul Sharma">
+
         <label for="board">Board</label>
         <select id="board" onchange="resetLayer2()">
             <option value="" disabled selected>-- Choose board --</option>
@@ -76,13 +92,21 @@
         <button onclick="analyze()">Analyze & Generate Timetable</button>
     </div>
 
-    <div class="layer">
+    <!-- RESULTS (printable) -->
+    <div class="layer printable">
         <div id="error" class="section"></div>
         <div id="result" class="section"></div>
     </div>
 
-    <div class="layer" id="timetable-section" style="display:none;">
-        <h2>📅 Your Personalized Study Timetable</h2>
+    <!-- RADAR CHART (printable) -->
+    <div class="layer printable" id="radar-section">
+        <h2>🕸️ Subject Strength Radar</h2>
+        <canvas id="radarChart"></canvas>
+    </div>
+
+    <!-- TIMETABLE (printable) -->
+    <div class="layer printable" id="timetable-section" style="display:none;">
+        <h2>📅 Personalized Study Timetable</h2>
         <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker subjects</p>
         <div class="timetable-grid" id="timetable-grid"></div>
     </div>
@@ -90,12 +114,15 @@
     <!-- LAYER 3: AI DOUBT SOLVER -->
     <div class="layer">
         <div class="layer-title"><div class="step-badge">3</div><h2 style="margin:0;">🤖 Personal AI Doubt Solver</h2></div>
-        <p class="layer-subtitle">Ask any doubt — answers are tailored to your class, board & weak subjects</p>
+        <p class="layer-subtitle">Type OR speak 🎤 your doubt — answers tailored to your class & board</p>
         <div id="chat-box">
             <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything like:<br>• "What is photosynthesis?"<br>• "Solve 15*8+20"<br>• "Explain fractions simply"</div>
         </div>
-        <input type="text" id="doubt_input" placeholder="Type your doubt here..." onkeydown="if(event.key==='Enter') askDoubt()">
-        <button onclick="askDoubt()">Ask AI 🤖</button>
+        <div class="doubt-row">
+            <input type="text" id="doubt_input" placeholder="Type or speak your doubt..." onkeydown="if(event.key==='Enter') askDoubt()">
+            <button class="mic-btn no-print" onclick="startVoice()" title="Speak your doubt">🎤</button>
+        </div>
+        <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
     </div>
 
     <div class="layer">
@@ -105,7 +132,8 @@
 
     <script>
     let myChart = null;
-    let studentContext = { board: "", student_class: "", stream: "None", weak_subjects: [] };
+    let myRadar = null;
+    let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
 
     const EMOJIS = {
         "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -140,9 +168,11 @@
         document.getElementById('layer2').style.display = 'none';
         document.getElementById('timetable-section').style.display = 'none';
         document.getElementById('result').style.display = 'none';
+        document.getElementById('radar-section').style.display = 'none';
     }
 
     function submitLayer1() {
+        const name = document.getElementById('student_name').value.trim() || "Student";
         const board = document.getElementById('board').value;
         const cls = document.getElementById('student_class').value;
         const c = parseInt(cls.replace("Class ", ""));
@@ -152,13 +182,14 @@
             alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + " first!");
             return;
         }
+        studentContext.name = name;
         studentContext.board = board;
         studentContext.student_class = cls;
         studentContext.stream = stream;
 
         const subjects = getSubjects(board, cls, stream);
         document.getElementById('layer2-subtitle').textContent =
-            `${board} | ${cls}` + (stream !== "None" ? ` | ${stream}` : "") + ` → Subjects: ${subjects.join(', ')}`;
+            `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
         document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
             <label>${EMOJIS[s] || '📘'} ${s} Score (%)</label>
             <input type="number" class="subject-score" data-subject="${s}" min="0" max="100" placeholder="e.g., 70">
@@ -195,6 +226,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    student_name: studentContext.name,
                     board: studentContext.board,
                     student_class: studentContext.student_class,
                     stream: studentContext.stream,
@@ -208,7 +240,8 @@
             studentContext.weak_subjects = data.weak_subjects;
 
             resultDiv.innerHTML = `
-                <h3>🎯 Performance Level: ${data.performance_level}</h3>
+                <p style="font-size:0.8rem; color:#7f8c8d; margin:0;">📄 Report for <strong>${studentContext.name}</strong> • ${studentContext.board} • ${studentContext.student_class}${studentContext.stream !== "None" ? " • " + studentContext.stream : ""} • ${new Date().toLocaleDateString()}</p>
+                <h3>🎯 ${studentContext.name}, your Performance Level: ${data.performance_level}</h3>
                 <p><strong>Average Score:</strong> ${data.average_score}% | <strong>Confidence:</strong> ${data.confidence}%</p>
                 ${data.weak_subjects.length > 0 ?
                     `<p><strong>⚠️ Weak Subjects:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
@@ -217,8 +250,29 @@
                     <strong>💡 Recommendations:</strong>
                     <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
                 </div>
+                <button class="no-print" onclick="window.print()" style="margin-top:1rem; background:#27ae60;">🖨️ Download PDF Report</button>
             `;
             resultDiv.style.display = 'block';
+
+            // ✅ RADAR CHART
+            const radarSection = document.getElementById('radar-section');
+            radarSection.style.display = 'block';
+            const rctx = document.getElementById('radarChart').getContext('2d');
+            if (myRadar) myRadar.destroy();
+            myRadar = new Chart(rctx, {
+                type: 'radar',
+                data: {
+                    labels: Object.keys(subjectScores),
+                    datasets: [{
+                        label: studentContext.name,
+                        data: Object.values(subjectScores),
+                        backgroundColor: 'rgba(52,152,219,0.2)',
+                        borderColor: '#3498db',
+                        pointBackgroundColor: '#2980b9'
+                    }]
+                },
+                options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
+            });
 
             if (data.timetable && data.timetable.length > 0) {
                 document.getElementById('timetable-grid').innerHTML = data.timetable.map(day => `
@@ -232,6 +286,20 @@
             errorDiv.textContent = `Error: ${err.message}`;
             errorDiv.style.display = 'block';
         }
+    }
+
+    // ✅ VOICE INPUT
+    function startVoice() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { alert("Voice input not supported in this browser. Please type your doubt."); return; }
+        const rec = new SR();
+        rec.lang = 'en-IN';
+        rec.interimResults = false;
+        rec.onresult = (e) => {
+            document.getElementById('doubt_input').value = e.results[0][0].transcript;
+        };
+        rec.onerror = () => alert("🎤 Could not hear you. Try again!");
+        rec.start();
     }
 
     async function askDoubt() {

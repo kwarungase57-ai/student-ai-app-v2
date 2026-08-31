@@ -15,6 +15,7 @@ Base = declarative_base()
 class StudentRecord(Base):
     __tablename__ = "student_records"
     id = Column(Integer, primary_key=True, index=True)
+    student_name = Column(String, nullable=True)
     board = Column(String, nullable=False)
     student_class = Column(String, nullable=False)
     stream = Column(String, nullable=False)

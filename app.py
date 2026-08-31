@@ -39,6 +39,7 @@ def emoji_for(subject):
     return EMOJIS.get(subject, "📘")
 
 class StudentInput(BaseModel):
+    student_name: str = "Student"
     board: str
     student_class: str
     stream: str = "None"
@@ -128,6 +129,13 @@ async def serve_frontend():
 async def manifest():
     return FileResponse("manifest.json", media_type="application/json")
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy():
+    if os.path.exists("privacy.html"):
+        with open("privacy.html", "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Not found</h1>", status_code=404)
+
 def get_advice(subject, score):
     e = emoji_for(subject)
     if score < 40:
@@ -200,6 +208,7 @@ async def predict(data: StudentInput):
         db = SessionLocal()
         try:
             record = StudentRecord(
+                student_name=data.student_name,
                 board=data.board,
                 student_class=data.student_class,
                 stream=data.stream,
