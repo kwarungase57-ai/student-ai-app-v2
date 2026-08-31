@@ -3,121 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Student Performance Predictor</title>
+    <title>AI Student Performance & Timetable Generator</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem;}
+        h1, h2 { color: #2c3e50; text-align: center; }
         label { display: block; margin-top: 1rem; font-weight: 600; color: #34495e; }
         input, select { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+        button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
         button:hover { background: #2980b9; }
-        #result { margin-top: 1.5rem; padding: 1rem; background: #e8f6f3; border-radius: 6px; display: none; }
-        #error { margin-top: 1rem; padding: 1rem; background: #fdedec; border-radius: 6px; color: #e74c3c; display: none; }
-        .chart-container { margin-top: 2rem; padding: 1rem; background: #fff; border-radius: 8px; border: 1px solid #eee; }
-        h2 { text-align: center; color: #2c3e50; font-size: 1.2rem; margin-bottom: 1rem; }
+        .section { margin-top: 1.5rem; padding: 1.2rem; border-radius: 8px; display: none; }
+        #result { background: #e8f6f3; border-left: 4px solid #27ae60; }
+        #timetable-section { background: #ebf5fb; border-left: 4px solid #3498db; }
+        #error { background: #fdedec; border-left: 4px solid #e74c3c; color: #c0392b; }
+        .timetable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 1rem; }
+        .day-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #d4e6f1; text-align: center; }
+        .day-card h4 { margin: 0 0 8px 0; color: #2980b9; font-size: 0.9rem; }
+        .day-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
+        .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
+        .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎓 AI Study Predictor</h1>
-        <p style="text-align:center; color:#7f8c8d;">Get personalized performance predictions</p>
-        
-        <!-- ✅ NEW: Class Selection Layer -->
-        <label for="student_class">Select Class / Grade</label>
+        <h1>🎓 AI Study Analyzer & Planner</h1>
+        <p style="text-align:center; color:#7f8c8d;">Diagnostic test → Weak subject analysis → Personalized timetable</p>
+
+        <label for="student_class">Select Class</label>
         <select id="student_class">
-            <option value="" disabled selected>-- Choose your class --</option>
-            <option value="Class 6">Class 6</option>
-            <option value="Class 7">Class 7</option>
-            <option value="Class 8">Class 8</option>
-            <option value="Class 9">Class 9</option>
-            <option value="Class 10">Class 10</option>
-            <option value="Class 11">Class 11</option>
+            <option value="" disabled selected>-- Choose class --</option>
+            <option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>
+            <option value="Class 8">Class 8</option><option value="Class 9">Class 9</option>
+            <option value="Class 10">Class 10</option><option value="Class 11">Class 11</option>
             <option value="Class 12">Class 12</option>
         </select>
 
-        <label for="study_hours">Weekly Study Hours</label>
-        <input type="number" id="study_hours" placeholder="e.g., 10" min="0">
-        
-        <label for="attendance">Attendance (%)</label>
-        <input type="number" id="attendance" placeholder="e.g., 85" min="0" max="100">
-        
-        <label for="math_score">Math Score (%)</label>
-        <input type="number" id="math_score" placeholder="e.g., 75" min="0" max="100">
-        
-        <label for="science_score">Science Score (%)</label>
-        <input type="number" id="science_score" placeholder="e.g., 75" min="0" max="100">
-        
-        <label for="english_score">English Score (%)</label>
-        <input type="number" id="english_score" placeholder="e.g., 75" min="0" max="100">
-        
-        <button onclick="predict()">Predict Performance</button>
-        
-        <div id="result"></div>
-        <div id="error"></div>
+        <label for="career_stream">Career Stream</label>
+        <select id="career_stream">
+            <option value="" disabled selected>-- Choose stream --</option>
+            <option value="Science">Science (PCM/PCB)</option>
+            <option value="Commerce">Commerce</option>
+            <option value="Arts">Arts / Humanities</option>
+            <option value="Vocational">Vocational</option>
+        </select>
 
-        <div class="chart-container">
-            <h2>📈 Your Progress History</h2>
-            <canvas id="progressChart"></canvas>
-        </div>
+        <label for="study_hours">Available Study Hours Per Week</label>
+        <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
+
+        <label for="math_test">📐 Math Diagnostic Test Score (%)</label>
+        <input type="number" id="math_test" placeholder="e.g., 45" min="0" max="100">
+
+        <label for="science_test">🔬 Science Diagnostic Test Score (%)</label>
+        <input type="number" id="science_test" placeholder="e.g., 60" min="0" max="100">
+
+        <label for="english_test">📚 English Diagnostic Test Score (%)</label>
+        <input type="number" id="english_test" placeholder="e.g., 70" min="0" max="100">
+
+        <button onclick="analyze()">Analyze & Generate Timetable</button>
+
+        <div id="error" class="section"></div>
+        <div id="result" class="section"></div>
+    </div>
+
+    <div class="container" id="timetable-section" style="display:none;">
+        <h2>📅 Your Personalized Study Timetable</h2>
+        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker subjects based on diagnostic results</p>
+        <div class="timetable-grid" id="timetable-grid"></div>
+    </div>
+
+    <div class="container">
+        <h2>📈 Progress History</h2>
+        <canvas id="progressChart"></canvas>
     </div>
 
     <script>
     let myChart = null;
 
-    async function predict() {
+    async function analyze() {
         const resultDiv = document.getElementById('result');
         const errorDiv = document.getElementById('error');
+        const ttSection = document.getElementById('timetable-section');
         resultDiv.style.display = 'none';
         errorDiv.style.display = 'none';
+        ttSection.style.display = 'none';
 
-        // Get ALL values including class
         const studentClass = document.getElementById('student_class').value;
+        const careerStream = document.getElementById('career_stream').value;
         const studyHours = parseFloat(document.getElementById('study_hours').value);
-        const attendance = parseFloat(document.getElementById('attendance').value);
-        const mathScore = parseFloat(document.getElementById('math_score').value);
-        const scienceScore = parseFloat(document.getElementById('science_score').value);
-        const englishScore = parseFloat(document.getElementById('english_score').value);
+        const mathTest = parseFloat(document.getElementById('math_test').value);
+        const scienceTest = parseFloat(document.getElementById('science_test').value);
+        const englishTest = parseFloat(document.getElementById('english_test').value);
 
-        if (!studentClass || isNaN(studyHours) || isNaN(attendance) || isNaN(mathScore) || isNaN(scienceScore) || isNaN(englishScore)) {
-            errorDiv.textContent = "Please fill in ALL fields including Class selection.";
+        if (!studentClass || !careerStream || isNaN(studyHours) || isNaN(mathTest) || isNaN(scienceTest) || isNaN(englishTest)) {
+            errorDiv.textContent = "Please fill in ALL fields.";
             errorDiv.style.display = 'block';
             return;
         }
-
-        const payload = {
-            student_class: studentClass,
-            study_hours: studyHours,
-            attendance: attendance,
-            math_score: mathScore,
-            science_score: scienceScore,
-            english_score: englishScore
-        };
 
         try {
             const response = await fetch('/predict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    student_class: studentClass,
+                    career_stream: careerStream,
+                    study_hours: studyHours,
+                    math_score: mathTest,
+                    science_score: scienceTest,
+                    english_score: englishTest
+                })
             });
 
             const data = await response.json();
-
-            if (!response.ok) throw new Error(data.detail || 'Prediction failed');
+            if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
             resultDiv.innerHTML = `
-                <h3> Prediction: ${data.performance_level}</h3>
+                <h3>🎯 Performance Level: ${data.performance_level}</h3>
                 <p><strong>Confidence:</strong> ${data.confidence}%</p>
-                ${data.weak_subjects.length > 0 ? `<p><strong>⚠️ Weak Areas:</strong> ${data.weak_subjects.join(', ')}</p>` : ''}
-                <div style="margin-top:1rem; text-align:left;">
+                ${data.weak_subjects.length > 0 ?
+                    `<p><strong>⚠️ Weak Subjects Identified:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
+                    '<p><strong>✅ No critical weak subjects detected!</strong></p>'}
+                <div style="margin-top:1rem;">
                     <strong>💡 Recommendations:</strong>
                     <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
                 </div>
             `;
             resultDiv.style.display = 'block';
-            loadChart(); 
 
+            if (data.timetable && data.timetable.length > 0) {
+                const grid = document.getElementById('timetable-grid');
+                grid.innerHTML = data.timetable.map(day => `
+                    <div class="day-card">
+                        <h4>${day.day}</h4>
+                        <ul>${day.tasks.map(t => `<li>${t}</li>`).join('')}</ul>
+                    </div>
+                `).join('');
+                ttSection.style.display = 'block';
+            }
+
+            loadChart();
         } catch (err) {
             errorDiv.textContent = `Error: ${err.message}`;
             errorDiv.style.display = 'block';
@@ -128,28 +153,24 @@
         try {
             const response = await fetch('/history');
             const historyData = await response.json();
-            const labels = historyData.map(r => `${new Date(r.timestamp).toLocaleDateString()} (${r.student_class})`).reverse();
-            const scores = historyData.map(r => r.math_score).reverse();
+            const labels = historyData.map(r => `${new Date(r.timestamp).toLocaleDateString()}`).reverse();
+            const mathScores = historyData.map(r => r.math_score).reverse();
+            const sciScores = historyData.map(r => r.science_score).reverse();
 
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (myChart) myChart.destroy();
-
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Math Score Trend',
-                        data: scores,
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                        tension: 0.3,
-                        fill: true
-                    }]
+                    labels,
+                    datasets: [
+                        { label: 'Math', data: mathScores, borderColor: '#e74c3c', tension: 0.3 },
+                        { label: 'Science', data: sciScores, borderColor: '#3498db', tension: 0.3 }
+                    ]
                 },
                 options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
             });
-        } catch (err) { console.error("Failed to load chart:", err); }
+        } catch (err) { console.error(err); }
     }
     window.onload = loadChart;
     </script>

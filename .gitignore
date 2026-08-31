@@ -2,5 +2,5 @@
 __pycache__/
 *.pyc
 predictions.db
-student_model.pkl
+student_model
 .env

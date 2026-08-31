@@ -15,9 +15,9 @@ Base = declarative_base()
 class StudentRecord(Base):
     __tablename__ = "student_records"
     id = Column(Integer, primary_key=True, index=True)
-    student_class = Column(String, nullable=False)  # ✅ NEW COLUMN
+    student_class = Column(String, nullable=False)
+    career_stream = Column(String, nullable=False)
     study_hours = Column(Float, nullable=False)
-    attendance = Column(Float, nullable=False)
     math_score = Column(Float, nullable=False)
     science_score = Column(Float, nullable=False)
     english_score = Column(Float, nullable=False)
@@ -30,5 +30,7 @@ def init_db():
 
 def get_db():
     db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    try:
+        yield db
+    finally:
+        db.close()
