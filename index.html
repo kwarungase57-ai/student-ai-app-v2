@@ -27,54 +27,65 @@
         .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         #layer2 { display: none; }
-        .locked-msg { text-align: center; color: #95a5a6; font-size: 0.9rem; padding: 1rem 0 0 0; }
     </style>
 </head>
 <body>
     <h1>🎓 AI Study Analyzer & Planner</h1>
 
-    <!-- ✅ LAYER 1: CLASS -->
+    <!-- LAYER 1: BOARD + CLASS + STREAM -->
     <div class="layer">
         <div class="layer-title">
             <div class="step-badge">1</div>
-            <h2 style="margin:0;">Select Your Class</h2>
+            <h2 style="margin:0;">Board, Class & Stream</h2>
         </div>
-        <p class="layer-subtitle">Choose your current class to unlock lecture analysis</p>
+        <p class="layer-subtitle">Select your board and class (stream appears for Class 11–12)</p>
 
-        <label for="student_class">Class / Grade</label>
-        <select id="student_class" onchange="unlockLayer2()">
+        <label for="board">Board</label>
+        <select id="board" onchange="resetLayer2()">
+            <option value="" disabled selected>-- Choose board --</option>
+            <option value="CBSE">CBSE</option>
+            <option value="ICSE">ICSE</option>
+            <option value="SSC">SSC (State Board)</option>
+        </select>
+
+        <label for="student_class">Class</label>
+        <select id="student_class" onchange="toggleStream()">
             <option value="" disabled selected>-- Choose class --</option>
             <option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>
             <option value="Class 8">Class 8</option><option value="Class 9">Class 9</option>
             <option value="Class 10">Class 10</option><option value="Class 11">Class 11</option>
             <option value="Class 12">Class 12</option>
         </select>
+
+        <div id="stream_wrap" style="display:none;">
+            <label for="stream">Stream</label>
+            <select id="stream" onchange="resetLayer2()">
+                <option value="" disabled selected>-- Choose stream --</option>
+                <option value="Science">Science</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Arts">Arts / Humanities</option>
+            </select>
+        </div>
+
+        <button onclick="submitLayer1()">Next →</button>
     </div>
 
-    <!-- ✅ LAYER 2: LECTURES (hidden until class selected) -->
+    <!-- LAYER 2: SUBJECTS -->
     <div class="layer" id="layer2">
         <div class="layer-title">
             <div class="step-badge">2</div>
             <h2 style="margin:0;">Lecture Details</h2>
         </div>
-        <p class="layer-subtitle">Enter your diagnostic test scores for each lecture</p>
+        <p class="layer-subtitle" id="layer2-subtitle"></p>
 
         <label for="study_hours">Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
 
-        <label for="math_test">📐 Math Lecture Score (%)</label>
-        <input type="number" id="math_test" placeholder="e.g., 45" min="0" max="100">
-
-        <label for="science_test">🔬 Science Lecture Score (%)</label>
-        <input type="number" id="science_test" placeholder="e.g., 60" min="0" max="100">
-
-        <label for="english_test">📚 English Lecture Score (%)</label>
-        <input type="number" id="english_test" placeholder="e.g., 70" min="0" max="100">
+        <div id="subject_inputs"></div>
 
         <button onclick="analyze()">Analyze & Generate Timetable</button>
     </div>
 
-    <!-- Results -->
     <div class="layer">
         <div id="error" class="section"></div>
         <div id="result" class="section"></div>
@@ -82,7 +93,7 @@
 
     <div class="layer" id="timetable-section" style="display:none;">
         <h2>📅 Your Personalized Study Timetable</h2>
-        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker lectures</p>
+        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker subjects</p>
         <div class="timetable-grid" id="timetable-grid"></div>
     </div>
 
@@ -94,10 +105,63 @@
     <script>
     let myChart = null;
 
-    // Unlock Layer 2 when class is selected
-    function unlockLayer2() {
+    const EMOJIS = {
+        "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
+        "Social Studies": "🌍", "Physics": "⚛️", "Chemistry": "🧪",
+        "Computer Science": "💻", "Computer Applications": "💻",
+        "Marathi": "📖", "Accountancy": "🧾", "Business Studies": "💼",
+        "Economics": "📈", "History": "🏛️", "Political Science": "🗳️",
+        "Geography": "🗺️"
+    };
+
+    function getSubjects(board, cls, stream) {
+        const c = parseInt(cls.replace("Class ", ""));
+        if (c <= 10) {
+            if (board === "ICSE") return ["Math","Science","English","Hindi","Social Studies","Computer Applications"];
+            if (board === "SSC")  return ["Math","Science","English","Marathi","Social Studies"];
+            return ["Math","Science","English","Hindi","Social Studies"];
+        } else {
+            if (stream === "Science")  return ["Math","Physics","Chemistry","English","Computer Science"];
+            if (stream === "Commerce") return ["Accountancy","Business Studies","Economics","English","Math"];
+            return ["History","Political Science","Geography","English","Hindi"];
+        }
+    }
+
+    function toggleStream() {
+        const cls = document.getElementById('student_class').value;
+        const c = parseInt(cls.replace("Class ", ""));
+        document.getElementById('stream_wrap').style.display = (c >= 11) ? 'block' : 'none';
+        resetLayer2();
+    }
+
+    function resetLayer2() {
+        document.getElementById('layer2').style.display = 'none';
+        document.getElementById('timetable-section').style.display = 'none';
+        document.getElementById('result').style.display = 'none';
+    }
+
+    function submitLayer1() {
+        const board = document.getElementById('board').value;
+        const cls = document.getElementById('student_class').value;
+        const c = parseInt(cls.replace("Class ", ""));
+        const stream = (c >= 11) ? document.getElementById('stream').value : "None";
+
+        if (!board || !cls || (c >= 11 && !stream)) {
+            alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + " first!");
+            return;
+        }
+
+        const subjects = getSubjects(board, cls, stream);
+        document.getElementById('layer2-subtitle').textContent =
+            `${board} | ${cls}` + (stream !== "None" ? ` | ${stream}` : "") + ` → Subjects: ${subjects.join(', ')}`;
+
+        document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
+            <label>${EMOJIS[s] || '📘'} ${s} Score (%)</label>
+            <input type="number" class="subject-score" data-subject="${s}" min="0" max="100" placeholder="e.g., 70">
+        `).join('');
+
         document.getElementById('layer2').style.display = 'block';
-        document.getElementById('layer2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
     async function analyze() {
@@ -108,13 +172,21 @@
         errorDiv.style.display = 'none';
         ttSection.style.display = 'none';
 
-        const studentClass = document.getElementById('student_class').value;
+        const board = document.getElementById('board').value;
+        const cls = document.getElementById('student_class').value;
+        const c = parseInt(cls.replace("Class ", ""));
+        const stream = (c >= 11) ? document.getElementById('stream').value : "None";
         const studyHours = parseFloat(document.getElementById('study_hours').value);
-        const mathTest = parseFloat(document.getElementById('math_test').value);
-        const scienceTest = parseFloat(document.getElementById('science_test').value);
-        const englishTest = parseFloat(document.getElementById('english_test').value);
 
-        if (!studentClass || isNaN(studyHours) || isNaN(mathTest) || isNaN(scienceTest) || isNaN(englishTest)) {
+        const subjectScores = {};
+        let valid = true;
+        document.querySelectorAll('.subject-score').forEach(inp => {
+            const v = parseFloat(inp.value);
+            if (isNaN(v)) valid = false;
+            subjectScores[inp.dataset.subject] = v;
+        });
+
+        if (isNaN(studyHours) || !valid) {
             errorDiv.textContent = "Please fill in ALL fields.";
             errorDiv.style.display = 'block';
             return;
@@ -125,23 +197,22 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    student_class: studentClass,
+                    board: board,
+                    student_class: cls,
+                    stream: stream,
                     study_hours: studyHours,
-                    math_score: mathTest,
-                    science_score: scienceTest,
-                    english_score: englishTest
+                    subject_scores: subjectScores
                 })
             });
-
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
             resultDiv.innerHTML = `
                 <h3>🎯 Performance Level: ${data.performance_level}</h3>
-                <p><strong>Confidence:</strong> ${data.confidence}%</p>
+                <p><strong>Average Score:</strong> ${data.average_score}% | <strong>Confidence:</strong> ${data.confidence}%</p>
                 ${data.weak_subjects.length > 0 ?
-                    `<p><strong>⚠️ Weak Lectures Identified:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
-                    '<p><strong>✅ No critical weak lectures detected!</strong></p>'}
+                    `<p><strong>⚠️ Weak Subjects:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
+                    '<p><strong>✅ No weak subjects detected!</strong></p>'}
                 <div style="margin-top:1rem;">
                     <strong>💡 Recommendations:</strong>
                     <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
@@ -150,8 +221,7 @@
             resultDiv.style.display = 'block';
 
             if (data.timetable && data.timetable.length > 0) {
-                const grid = document.getElementById('timetable-grid');
-                grid.innerHTML = data.timetable.map(day => `
+                document.getElementById('timetable-grid').innerHTML = data.timetable.map(day => `
                     <div class="day-card">
                         <h4>${day.day}</h4>
                         <ul>${day.tasks.map(t => `<li>${t}</li>`).join('')}</ul>
@@ -159,7 +229,6 @@
                 `).join('');
                 ttSection.style.display = 'block';
             }
-
             loadChart();
         } catch (err) {
             errorDiv.textContent = `Error: ${err.message}`;
@@ -171,20 +240,15 @@
         try {
             const response = await fetch('/history');
             const historyData = await response.json();
-            const labels = historyData.map(r => `${new Date(r.timestamp).toLocaleDateString()}`).reverse();
-            const mathScores = historyData.map(r => r.math_score).reverse();
-            const sciScores = historyData.map(r => r.science_score).reverse();
-
+            const labels = historyData.map(r => new Date(r.timestamp).toLocaleDateString()).reverse();
+            const avgScores = historyData.map(r => r.avg_score).reverse();
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (myChart) myChart.destroy();
             myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
-                    datasets: [
-                        { label: 'Math', data: mathScores, borderColor: '#e74c3c', tension: 0.3 },
-                        { label: 'Science', data: sciScores, borderColor: '#3498db', tension: 0.3 }
-                    ]
+                    datasets: [{ label: 'Average Score', data: avgScores, borderColor: '#27ae60', tension: 0.3, fill: false }]
                 },
                 options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
             });

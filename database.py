@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
+from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -15,11 +15,12 @@ Base = declarative_base()
 class StudentRecord(Base):
     __tablename__ = "student_records"
     id = Column(Integer, primary_key=True, index=True)
+    board = Column(String, nullable=False)
     student_class = Column(String, nullable=False)
+    stream = Column(String, nullable=False)
     study_hours = Column(Float, nullable=False)
-    math_score = Column(Float, nullable=False)
-    science_score = Column(Float, nullable=False)
-    english_score = Column(Float, nullable=False)
+    avg_score = Column(Float, nullable=False)
+    subject_scores = Column(Text, nullable=False)
     performance_level = Column(String, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
