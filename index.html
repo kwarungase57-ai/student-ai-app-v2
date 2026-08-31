@@ -27,27 +27,26 @@
         .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         #layer2 { display: none; }
+        /* Chat styles */
+        #chat-box { max-height: 320px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
+        .chat-msg { padding: 0.7rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
+        .user-msg { background: #3498db; color: white; margin-left: auto; }
+        .ai-msg { background: #ecf0f1; color: #2c3e50; }
+        .src-tag { font-size: 0.7rem; color: #95a5a6; display: block; margin-top: 4px; }
     </style>
 </head>
 <body>
     <h1>🎓 AI Study Analyzer & Planner</h1>
 
-    <!-- LAYER 1: BOARD + CLASS + STREAM -->
+    <!-- LAYER 1 -->
     <div class="layer">
-        <div class="layer-title">
-            <div class="step-badge">1</div>
-            <h2 style="margin:0;">Board, Class & Stream</h2>
-        </div>
+        <div class="layer-title"><div class="step-badge">1</div><h2 style="margin:0;">Board, Class & Stream</h2></div>
         <p class="layer-subtitle">Select your board and class (stream appears for Class 11–12)</p>
-
         <label for="board">Board</label>
         <select id="board" onchange="resetLayer2()">
             <option value="" disabled selected>-- Choose board --</option>
-            <option value="CBSE">CBSE</option>
-            <option value="ICSE">ICSE</option>
-            <option value="SSC">SSC (State Board)</option>
+            <option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="SSC">SSC (State Board)</option>
         </select>
-
         <label for="student_class">Class</label>
         <select id="student_class" onchange="toggleStream()">
             <option value="" disabled selected>-- Choose class --</option>
@@ -56,33 +55,23 @@
             <option value="Class 10">Class 10</option><option value="Class 11">Class 11</option>
             <option value="Class 12">Class 12</option>
         </select>
-
         <div id="stream_wrap" style="display:none;">
             <label for="stream">Stream</label>
             <select id="stream" onchange="resetLayer2()">
                 <option value="" disabled selected>-- Choose stream --</option>
-                <option value="Science">Science</option>
-                <option value="Commerce">Commerce</option>
-                <option value="Arts">Arts / Humanities</option>
+                <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Arts">Arts / Humanities</option>
             </select>
         </div>
-
         <button onclick="submitLayer1()">Next →</button>
     </div>
 
-    <!-- LAYER 2: SUBJECTS -->
+    <!-- LAYER 2 -->
     <div class="layer" id="layer2">
-        <div class="layer-title">
-            <div class="step-badge">2</div>
-            <h2 style="margin:0;">Lecture Details</h2>
-        </div>
+        <div class="layer-title"><div class="step-badge">2</div><h2 style="margin:0;">Lecture Details</h2></div>
         <p class="layer-subtitle" id="layer2-subtitle"></p>
-
         <label for="study_hours">Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
-
         <div id="subject_inputs"></div>
-
         <button onclick="analyze()">Analyze & Generate Timetable</button>
     </div>
 
@@ -97,6 +86,17 @@
         <div class="timetable-grid" id="timetable-grid"></div>
     </div>
 
+    <!-- ✅ LAYER 3: AI DOUBT SOLVER -->
+    <div class="layer">
+        <div class="layer-title"><div class="step-badge">3</div><h2 style="margin:0;">🤖 Personal AI Doubt Solver</h2></div>
+        <p class="layer-subtitle">Ask any doubt — answers are tailored to your class, board & weak subjects</p>
+        <div id="chat-box">
+            <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything like:<br>• "What is photosynthesis?"<br>• "Solve 15*8+20"<br>• "Explain fractions simply"</div>
+        </div>
+        <input type="text" id="doubt_input" placeholder="Type your doubt here..." onkeydown="if(event.key==='Enter') askDoubt()">
+        <button onclick="askDoubt()">Ask AI 🤖</button>
+    </div>
+
     <div class="layer">
         <h2>📈 Progress History</h2>
         <canvas id="progressChart"></canvas>
@@ -104,6 +104,7 @@
 
     <script>
     let myChart = null;
+    let studentContext = { board: "", student_class: "", stream: "None", weak_subjects: [] };
 
     const EMOJIS = {
         "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -150,16 +151,17 @@
             alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + " first!");
             return;
         }
+        studentContext.board = board;
+        studentContext.student_class = cls;
+        studentContext.stream = stream;
 
         const subjects = getSubjects(board, cls, stream);
         document.getElementById('layer2-subtitle').textContent =
             `${board} | ${cls}` + (stream !== "None" ? ` | ${stream}` : "") + ` → Subjects: ${subjects.join(', ')}`;
-
         document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
             <label>${EMOJIS[s] || '📘'} ${s} Score (%)</label>
             <input type="number" class="subject-score" data-subject="${s}" min="0" max="100" placeholder="e.g., 70">
         `).join('');
-
         document.getElementById('layer2').style.display = 'block';
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
@@ -172,12 +174,7 @@
         errorDiv.style.display = 'none';
         ttSection.style.display = 'none';
 
-        const board = document.getElementById('board').value;
-        const cls = document.getElementById('student_class').value;
-        const c = parseInt(cls.replace("Class ", ""));
-        const stream = (c >= 11) ? document.getElementById('stream').value : "None";
         const studyHours = parseFloat(document.getElementById('study_hours').value);
-
         const subjectScores = {};
         let valid = true;
         document.querySelectorAll('.subject-score').forEach(inp => {
@@ -197,15 +194,17 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    board: board,
-                    student_class: cls,
-                    stream: stream,
+                    board: studentContext.board,
+                    student_class: studentContext.student_class,
+                    stream: studentContext.stream,
                     study_hours: studyHours,
                     subject_scores: subjectScores
                 })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
+
+            studentContext.weak_subjects = data.weak_subjects; // personalize AI tutor
 
             resultDiv.innerHTML = `
                 <h3>🎯 Performance Level: ${data.performance_level}</h3>
@@ -222,10 +221,8 @@
 
             if (data.timetable && data.timetable.length > 0) {
                 document.getElementById('timetable-grid').innerHTML = data.timetable.map(day => `
-                    <div class="day-card">
-                        <h4>${day.day}</h4>
-                        <ul>${day.tasks.map(t => `<li>${t}</li>`).join('')}</ul>
-                    </div>
+                    <div class="day-card"><h4>${day.day}</h4>
+                    <ul>${day.tasks.map(t => `<li>${t}</li>`).join('')}</ul></div>
                 `).join('');
                 ttSection.style.display = 'block';
             }
@@ -234,6 +231,40 @@
             errorDiv.textContent = `Error: ${err.message}`;
             errorDiv.style.display = 'block';
         }
+    }
+
+    // ✅ LAYER 3: ASK AI
+    async function askDoubt() {
+        const input = document.getElementById('doubt_input');
+        const q = input.value.trim();
+        if (!q) return;
+        const box = document.getElementById('chat-box');
+        box.innerHTML += `<div class="chat-msg user-msg">${q.replace(/</g,'&lt;')}</div>`;
+        input.value = '';
+        box.innerHTML += `<div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            const response = await fetch('/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    question: q,
+                    board: studentContext.board,
+                    student_class: studentContext.student_class,
+                    stream: studentContext.stream,
+                    weak_subjects: studentContext.weak_subjects
+                })
+            });
+            const data = await response.json();
+            document.getElementById('thinking').remove();
+            const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
+            box.innerHTML += `<div class="chat-msg ai-msg">${data.answer.replace(/</g,'&lt;')}<span class="src-tag">${src}</span></div>`;
+        } catch (err) {
+            document.getElementById('thinking').remove();
+            box.innerHTML += `<div class="chat-msg ai-msg">❌ Sorry, something went wrong. Try again!</div>`;
+        }
+        box.scrollTop = box.scrollHeight;
     }
 
     async function loadChart() {
@@ -246,10 +277,7 @@
             if (myChart) myChart.destroy();
             myChart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels,
-                    datasets: [{ label: 'Average Score', data: avgScores, borderColor: '#27ae60', tension: 0.3, fill: false }]
-                },
+                data: { labels, datasets: [{ label: 'Average Score', data: avgScores, borderColor: '#27ae60', tension: 0.3, fill: false }] },
                 options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
             });
         } catch (err) { console.error(err); }
