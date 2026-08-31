@@ -7,8 +7,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem;}
+        .layer { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
         h1, h2 { color: #2c3e50; text-align: center; }
+        .layer-title { display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; }
+        .step-badge { background: #3498db; color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        .layer-subtitle { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem; }
         label { display: block; margin-top: 1rem; font-weight: 600; color: #34495e; }
         input, select { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
@@ -23,53 +26,79 @@
         .day-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
         .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
+        #layer2 { display: none; }
+        .locked-msg { text-align: center; color: #95a5a6; font-size: 0.9rem; padding: 1rem 0 0 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎓 AI Study Analyzer & Planner</h1>
-        <p style="text-align:center; color:#7f8c8d;">Diagnostic test → Weak subject analysis → Personalized timetable</p>
+    <h1>🎓 AI Study Analyzer & Planner</h1>
 
-        <label for="student_class">Select Class</label>
-        <select id="student_class">
+    <!-- ✅ LAYER 1: CLASS -->
+    <div class="layer">
+        <div class="layer-title">
+            <div class="step-badge">1</div>
+            <h2 style="margin:0;">Select Your Class</h2>
+        </div>
+        <p class="layer-subtitle">Choose your current class to unlock lecture analysis</p>
+
+        <label for="student_class">Class / Grade</label>
+        <select id="student_class" onchange="unlockLayer2()">
             <option value="" disabled selected>-- Choose class --</option>
             <option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>
             <option value="Class 8">Class 8</option><option value="Class 9">Class 9</option>
             <option value="Class 10">Class 10</option><option value="Class 11">Class 11</option>
             <option value="Class 12">Class 12</option>
         </select>
+    </div>
+
+    <!-- ✅ LAYER 2: LECTURES (hidden until class selected) -->
+    <div class="layer" id="layer2">
+        <div class="layer-title">
+            <div class="step-badge">2</div>
+            <h2 style="margin:0;">Lecture Details</h2>
+        </div>
+        <p class="layer-subtitle">Enter your diagnostic test scores for each lecture</p>
 
         <label for="study_hours">Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
 
-        <label for="math_test">📐 Math Diagnostic Test Score (%)</label>
+        <label for="math_test">📐 Math Lecture Score (%)</label>
         <input type="number" id="math_test" placeholder="e.g., 45" min="0" max="100">
 
-        <label for="science_test">🔬 Science Diagnostic Test Score (%)</label>
+        <label for="science_test">🔬 Science Lecture Score (%)</label>
         <input type="number" id="science_test" placeholder="e.g., 60" min="0" max="100">
 
-        <label for="english_test">📚 English Diagnostic Test Score (%)</label>
+        <label for="english_test">📚 English Lecture Score (%)</label>
         <input type="number" id="english_test" placeholder="e.g., 70" min="0" max="100">
 
         <button onclick="analyze()">Analyze & Generate Timetable</button>
+    </div>
 
+    <!-- Results -->
+    <div class="layer">
         <div id="error" class="section"></div>
         <div id="result" class="section"></div>
     </div>
 
-    <div class="container" id="timetable-section" style="display:none;">
+    <div class="layer" id="timetable-section" style="display:none;">
         <h2>📅 Your Personalized Study Timetable</h2>
-        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker subjects based on diagnostic results</p>
+        <p style="text-align:center; color:#7f8c8d; font-size:0.9rem;">More time allocated to weaker lectures</p>
         <div class="timetable-grid" id="timetable-grid"></div>
     </div>
 
-    <div class="container">
+    <div class="layer">
         <h2>📈 Progress History</h2>
         <canvas id="progressChart"></canvas>
     </div>
 
     <script>
     let myChart = null;
+
+    // Unlock Layer 2 when class is selected
+    function unlockLayer2() {
+        document.getElementById('layer2').style.display = 'block';
+        document.getElementById('layer2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     async function analyze() {
         const resultDiv = document.getElementById('result');
@@ -111,8 +140,8 @@
                 <h3>🎯 Performance Level: ${data.performance_level}</h3>
                 <p><strong>Confidence:</strong> ${data.confidence}%</p>
                 ${data.weak_subjects.length > 0 ?
-                    `<p><strong>⚠️ Weak Subjects Identified:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
-                    '<p><strong>✅ No critical weak subjects detected!</strong></p>'}
+                    `<p><strong>⚠️ Weak Lectures Identified:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
+                    '<p><strong>✅ No critical weak lectures detected!</strong></p>'}
                 <div style="margin-top:1rem;">
                     <strong>💡 Recommendations:</strong>
                     <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
