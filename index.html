@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Student Performance & Timetable Generator</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3498db">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
@@ -27,7 +29,6 @@
         .day-card li { padding: 3px 0; border-bottom: 1px dashed #eee; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
         #layer2 { display: none; }
-        /* Chat styles */
         #chat-box { max-height: 320px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
         .chat-msg { padding: 0.7rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
         .user-msg { background: #3498db; color: white; margin-left: auto; }
@@ -86,7 +87,7 @@
         <div class="timetable-grid" id="timetable-grid"></div>
     </div>
 
-    <!-- ✅ LAYER 3: AI DOUBT SOLVER -->
+    <!-- LAYER 3: AI DOUBT SOLVER -->
     <div class="layer">
         <div class="layer-title"><div class="step-badge">3</div><h2 style="margin:0;">🤖 Personal AI Doubt Solver</h2></div>
         <p class="layer-subtitle">Ask any doubt — answers are tailored to your class, board & weak subjects</p>
@@ -204,7 +205,7 @@
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
-            studentContext.weak_subjects = data.weak_subjects; // personalize AI tutor
+            studentContext.weak_subjects = data.weak_subjects;
 
             resultDiv.innerHTML = `
                 <h3>🎯 Performance Level: ${data.performance_level}</h3>
@@ -233,7 +234,6 @@
         }
     }
 
-    // ✅ LAYER 3: ASK AI
     async function askDoubt() {
         const input = document.getElementById('doubt_input');
         const q = input.value.trim();
@@ -257,11 +257,13 @@
                 })
             });
             const data = await response.json();
-            document.getElementById('thinking').remove();
+            const thinking = document.getElementById('thinking');
+            if (thinking) thinking.remove();
             const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
             box.innerHTML += `<div class="chat-msg ai-msg">${data.answer.replace(/</g,'&lt;')}<span class="src-tag">${src}</span></div>`;
         } catch (err) {
-            document.getElementById('thinking').remove();
+            const thinking = document.getElementById('thinking');
+            if (thinking) thinking.remove();
             box.innerHTML += `<div class="chat-msg ai-msg">❌ Sorry, something went wrong. Try again!</div>`;
         }
         box.scrollTop = box.scrollHeight;

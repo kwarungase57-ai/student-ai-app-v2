@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 from typing import Dict, List
 import joblib
@@ -52,7 +52,7 @@ class DoubtInput(BaseModel):
     stream: str = "None"
     weak_subjects: List[str] = []
 
-# ---------- OFFLINE TUTOR (fallback) ----------
+# ---------- OFFLINE TUTOR ----------
 def eval_expr(expr):
     allowed = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
                ast.Div: operator.truediv, ast.Pow: operator.pow, ast.USub: operator.neg}
@@ -76,7 +76,6 @@ CANNED = {
 }
 
 def fallback_tutor(q):
-    # 1. Try math calculation
     if re.search(r"\d", q) and re.search(r"[\+\-\*/×÷]", q):
         cleaned = q.lower().replace("x", "*").replace("×", "*").replace("÷", "/")
         m = re.findall(r"[\d\.\+\-\*/\(\)\s]+", cleaned)
@@ -85,15 +84,13 @@ def fallback_tutor(q):
             if len(part) >= 3:
                 try:
                     val = eval_expr(part)
-                    return f"📐 Calculation: {part.strip()} = {round(val, 4)}\n\nTip: Follow BODMAS order — Brackets, Orders (powers), Division/Multiplication, Addition/Subtraction."
+                    return f"📐 Calculation: {part} = {round(val, 4)}\n\nTip: Follow BODMAS order — Brackets, Orders (powers), Division/Multiplication, Addition/Subtraction."
                 except Exception:
                     continue
-    # 2. Canned explanations
     ql = q.lower()
     for key, ans in CANNED.items():
         if key in ql:
             return ans
-    # 3. Subject guidance
     if any(w in ql for w in ["math", "algebra", "geometry"]):
         return "📐 For Math doubts: (1) Understand the formula, (2) Solve one example step-by-step, (3) Practice 5 similar problems. Tell me the exact topic (e.g., quadratic equations) and I'll guide you!"
     if any(w in ql for w in ["science", "physics", "chemistry", "biology"]):
@@ -102,7 +99,6 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
-# ---------- AI DOUBT SOLVER ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
@@ -121,13 +117,16 @@ async def ask(data: DoubtInput):
             return {"answer": fallback_tutor(data.question), "source": "offline"}
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
-# ---------- EXISTING ROUTES ----------
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     if os.path.exists("index.html"):
         with open("index.html", "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Frontend not found</h1>", status_code=404)
+
+@app.get("/manifest.json")
+async def manifest():
+    return FileResponse("manifest.json", media_type="application/json")
 
 def get_advice(subject, score):
     e = emoji_for(subject)
