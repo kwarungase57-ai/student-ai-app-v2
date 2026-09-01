@@ -25,6 +25,13 @@ except Exception as e:
     print(f"❌ Error loading model: {e}")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+if GEMINI_API_KEY:
+    print("✅ Gemini API key detected")
+else:
+    print("⚠️ No GEMINI_API_KEY found — using offline tutor")
+
+# ✅ Try newest models first, fall back automatically
+GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]
 
 EMOJIS = {
     "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -101,22 +108,29 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
+# ---------- ✅ IMPROVED AI DOUBT SOLVER ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
     if GEMINI_API_KEY:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
-            prompt = (f"You are a friendly personal tutor. {context} "
-                      f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
-                      f"Student doubt: {data.question}")
-            r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-            out = r.json()
-            answer = out["candidates"][0]["content"]["parts"][0]["text"]
-            return {"answer": answer, "source": "gemini"}
-        except Exception:
-            return {"answer": fallback_tutor(data.question), "source": "offline"}
+        for model_name in GEMINI_MODELS:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                prompt = (f"You are a friendly personal tutor. {context} "
+                          f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
+                          f"Student doubt: {data.question}")
+                r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
+                if r.status_code != 200:
+                    print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:300]}")
+                    continue
+                out = r.json()
+                answer = out["candidates"][0]["content"]["parts"][0]["text"]
+                print(f"✅ Gemini answered via {model_name}")
+                return {"answer": answer, "source": "gemini"}
+            except Exception as e:
+                print(f"⚠️ Gemini {model_name} failed: {e}")
+                continue
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
 @app.get("/", response_class=HTMLResponse)
@@ -147,7 +161,6 @@ def get_advice(subject, score):
         return f"{e} {subject} Moderate: solve previous year papers and focus on tricky topics"
     return None
 
-# ---------- ✅ NEW: SPECIFIC TIMETABLE GENERATOR ----------
 def add_minutes(h, m, mins):
     total = h * 60 + m + int(mins)
     return (total // 60) % 24, total % 60
@@ -194,7 +207,6 @@ def generate_timetable(study_hours, subject_scores, start_time="16:00"):
             h, m = add_minutes(h, m, 35)
             tasks.append(f"🧘 {fmt_time(h, m)} – Rest, family time & light reading")
         else:
-            # rotate subject order daily for variety
             order = ordered[i % len(ordered):] + ordered[:i % len(ordered)]
             for idx, subj in enumerate(order):
                 mins = int(round(daily_minutes * weights[subj] / 5) * 5)
