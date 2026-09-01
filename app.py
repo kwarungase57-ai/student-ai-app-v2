@@ -44,6 +44,7 @@ class StudentInput(BaseModel):
     student_class: str
     stream: str = "None"
     study_hours: float
+    start_time: str = "16:00"
     subject_scores: Dict[str, float]
 
 class DoubtInput(BaseModel):
@@ -146,29 +147,66 @@ def get_advice(subject, score):
         return f"{e} {subject} Moderate: solve previous year papers and focus on tricky topics"
     return None
 
-def generate_timetable(study_hours, subject_scores):
+# ---------- ✅ NEW: SPECIFIC TIMETABLE GENERATOR ----------
+def add_minutes(h, m, mins):
+    total = h * 60 + m + int(mins)
+    return (total // 60) % 24, total % 60
+
+def fmt_time(h, m):
+    suffix = "AM" if h < 12 else "PM"
+    h12 = h % 12
+    if h12 == 0: h12 = 12
+    return f"{h12}:{m:02d} {suffix}"
+
+def activity_for(score):
+    if score < 40: return "Concept building: video lecture + NCERT reading"
+    if score < 60: return "Solved examples + exercise questions"
+    if score < 75: return "Practice set + previous year questions"
+    return "Advanced questions + speed revision"
+
+def generate_timetable(study_hours, subject_scores, start_time="16:00"):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
     total_gap = sum(max(0, 100 - s) for s in subject_scores.values())
     if total_gap == 0:
         weights = {s: 1/len(subject_scores) for s in subject_scores}
     else:
         weights = {s: max(0, 100 - sc) / total_gap for s, sc in subject_scores.items()}
 
-    daily_hours = study_hours / 7
+    ordered = sorted(subject_scores.keys(), key=lambda s: subject_scores[s])
+    weakest = ordered[0]
+
+    try:
+        sh, sm = [int(x) for x in start_time.split(":")]
+    except Exception:
+        sh, sm = 16, 0
+
+    daily_minutes = (study_hours * 60) / 6.0
     timetable = []
+
     for i, day in enumerate(days):
         tasks = []
+        h, m = sh, sm
         if day == "Sunday":
-            tasks.append("📝 Weekly Review & Test")
-            tasks.append("🧘 Rest & Light Reading")
+            tasks.append(f"📝 {fmt_time(h, m)} – Weekly Mock Test: {weakest} (60 min)")
+            h, m = add_minutes(h, m, 70)
+            tasks.append(f"🔁 {fmt_time(h, m)} – Review test mistakes + formula sheet (30 min)")
+            h, m = add_minutes(h, m, 35)
+            tasks.append(f"🧘 {fmt_time(h, m)} – Rest, family time & light reading")
         else:
-            for subj, w in weights.items():
-                hrs = round(daily_hours * w, 1)
-                if hrs >= 0.5:
-                    tasks.append(f"{emoji_for(subj)} {subj} ({hrs}h)")
-            if i % 2 == 0:
-                tasks.append("📘 General Revision (0.5h)")
-            tasks.append("✏️ Homework / Assignments")
+            # rotate subject order daily for variety
+            order = ordered[i % len(ordered):] + ordered[:i % len(ordered)]
+            for idx, subj in enumerate(order):
+                mins = int(round(daily_minutes * weights[subj] / 5) * 5)
+                if mins < 20:
+                    continue
+                eh, em = add_minutes(h, m, mins)
+                tasks.append(f"{emoji_for(subj)} {fmt_time(h, m)}–{fmt_time(eh, em)} {subj}: {activity_for(subject_scores[subj])} ({mins} min)")
+                if idx < len(order) - 1:
+                    tasks.append(f"☕ {fmt_time(eh, em)} – Short break (10 min)")
+                h, m = add_minutes(eh, em, 10)
+            tasks.append("✏️ Homework / school assignments")
+            tasks.append(f"🎯 Night target: revise today's {weakest} notes for 10 min before bed")
         timetable.append({"day": day, "tasks": tasks})
     return timetable
 
@@ -203,7 +241,7 @@ async def predict(data: StudentInput):
         if not weak_subjects:
             recommendations.append("🌟 Excellent scores! Focus on advanced problems & revision")
 
-        timetable = generate_timetable(data.study_hours, data.subject_scores)
+        timetable = generate_timetable(data.study_hours, data.subject_scores, data.start_time)
 
         db = SessionLocal()
         try:
