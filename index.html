@@ -110,7 +110,6 @@
         <canvas id="radarChart"></canvas>
     </div>
 
-    <!-- ✅ CUSTOMIZABLE TIMETABLE -->
     <div class="layer printable" id="timetable-section" style="display:none;">
         <h2>📅 Personalized Study Timetable</h2>
         <p style="text-align:center; color:#7f8c8d; font-size:0.8rem;">
@@ -145,8 +144,8 @@
     <script>
     let myChart = null;
     let myRadar = null;
-    let currentTimetable = null;  // [{day, tasks:[{text,done}]}]
-    let aiTimetable = null;       // last AI-generated version
+    let currentTimetable = null;
+    let aiTimetable = null;
     let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
 
     const EMOJIS = {
@@ -203,7 +202,6 @@
         studentContext.student_class = cls;
         studentContext.stream = stream;
 
-        // ✅ Load saved custom timetable if exists
         const saved = localStorage.getItem('tt_' + name);
         if (saved) {
             try {
@@ -223,7 +221,6 @@
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ---------- ✅ TIMETABLE CUSTOMIZATION ----------
     function toObj(tt) {
         return tt.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) }));
     }
@@ -364,7 +361,6 @@
                 options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
             });
 
-            // ✅ Set customizable timetable
             aiTimetable = data.timetable;
             currentTimetable = toObj(data.timetable);
             renderTimetable();

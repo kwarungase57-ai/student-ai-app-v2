@@ -10,6 +10,7 @@ import re
 import ast
 import operator
 import requests
+import time
 from database import SessionLocal, StudentRecord, init_db
 
 app = FastAPI(title="AI Student Analyzer & Timetable Generator")
@@ -30,8 +31,8 @@ if GEMINI_API_KEY:
 else:
     print("⚠️ No GEMINI_API_KEY found — using offline tutor")
 
-# ✅ Try newest models first, fall back automatically
-GEMINI_MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]
+# ✅ Newest models first, with automatic retry
+GEMINI_MODELS = ["gemini-2.6-flash", "gemini-flash-latest"]
 
 EMOJIS = {
     "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -108,29 +109,34 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
-# ---------- ✅ IMPROVED AI DOUBT SOLVER ----------
+# ---------- ✅ AI DOUBT SOLVER WITH RETRY ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
     if GEMINI_API_KEY:
         for model_name in GEMINI_MODELS:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                prompt = (f"You are a friendly personal tutor. {context} "
-                          f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
-                          f"Student doubt: {data.question}")
-                r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-                if r.status_code != 200:
-                    print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:300]}")
-                    continue
-                out = r.json()
-                answer = out["candidates"][0]["content"]["parts"][0]["text"]
-                print(f"✅ Gemini answered via {model_name}")
-                return {"answer": answer, "source": "gemini"}
-            except Exception as e:
-                print(f"⚠️ Gemini {model_name} failed: {e}")
-                continue
+            for attempt in range(2):
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                    prompt = (f"You are a friendly personal tutor. {context} "
+                              f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
+                              f"Student doubt: {data.question}")
+                    r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
+                    if r.status_code == 503 and attempt == 0:
+                        print(f"⚠️ {model_name} busy — retrying in 2s...")
+                        time.sleep(2)
+                        continue
+                    if r.status_code != 200:
+                        print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:200]}")
+                        break
+                    out = r.json()
+                    answer = out["candidates"][0]["content"]["parts"][0]["text"]
+                    print(f"✅ Gemini answered via {model_name}")
+                    return {"answer": answer, "source": "gemini"}
+                except Exception as e:
+                    print(f"⚠️ Gemini {model_name} failed: {e}")
+                    break
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
 @app.get("/", response_class=HTMLResponse)
