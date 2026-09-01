@@ -31,7 +31,6 @@ if GEMINI_API_KEY:
 else:
     print("⚠️ No GEMINI_API_KEY found — using offline tutor")
 
-# ✅ Newest models first, with automatic retry
 GEMINI_MODELS = ["gemini-2.6-flash", "gemini-flash-latest"]
 
 EMOJIS = {
@@ -109,7 +108,6 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
-# ---------- ✅ AI DOUBT SOLVER WITH RETRY ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "

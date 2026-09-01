@@ -385,6 +385,7 @@
         rec.start();
     }
 
+    // ✅ CRASH-PROOF AI CHAT
     async function askDoubt() {
         const input = document.getElementById('doubt_input');
         const q = input.value.trim();
@@ -394,6 +395,8 @@
         input.value = '';
         box.innerHTML += `<div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
         box.scrollTop = box.scrollHeight;
+
+        const removeThinking = () => { const t = document.getElementById('thinking'); if (t) t.remove(); };
 
         try {
             const response = await fetch('/ask', {
@@ -407,15 +410,19 @@
                     weak_subjects: studentContext.weak_subjects
                 })
             });
-            const data = await response.json();
-            const thinking = document.getElementById('thinking');
-            if (thinking) thinking.remove();
-            const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
-            box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
+            const text = await response.text();
+            let data = null;
+            try { data = JSON.parse(text); } catch (e) { data = null; }
+            removeThinking();
+            if (data && data.answer) {
+                const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
+                box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
+            } else {
+                box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server is waking up or busy. Wait ~10 seconds and ask again!</div>`;
+            }
         } catch (err) {
-            const thinking = document.getElementById('thinking');
-            if (thinking) thinking.remove();
-            box.innerHTML += `<div class="chat-msg ai-msg">❌ Sorry, something went wrong. Try again!</div>`;
+            removeThinking();
+            box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — the free server may be waking up. Wait 10 seconds and try again!</div>`;
         }
         box.scrollTop = box.scrollHeight;
     }
