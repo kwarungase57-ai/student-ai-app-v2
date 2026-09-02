@@ -51,7 +51,6 @@
 <body>
     <h1>🏠 AI Student Performance</h1>
 
-    <!-- STUDENT PROFILE -->
     <div class="layer">
         <h2>👤 Student Profile</h2>
         <label>🙋 Student Name</label>
@@ -79,7 +78,6 @@
         <button onclick="submitLayer1()">Next →</button>
     </div>
 
-    <!-- SCORES -->
     <div class="layer" id="layer2">
         <h2>📊 Enter Lecture Scores</h2>
         <p class="layer-subtitle" id="layer2-subtitle"></p>
@@ -91,7 +89,6 @@
         <button onclick="analyze()">Analyze → Open Dashboard</button>
     </div>
 
-    <!-- ✅ DASHBOARD -->
     <div id="dashboard">
         <div class="dash-nav no-print">
             <a href="#plan">🎯 Today's Plan</a><a href="#weak">🧠 Weak Topics</a>
@@ -99,7 +96,6 @@
             <a href="#revision">🔄 Revision</a><a href="#ai">🤖 AI Solver</a><a href="#history">📈 Progress</a>
         </div>
 
-        <!-- PERFORMANCE DASHBOARD -->
         <div class="layer printable">
             <h2>📊 Performance Dashboard</h2>
             <div id="result"></div>
@@ -107,7 +103,6 @@
             <button class="no-print" onclick="window.print()" style="background:#27ae60;">🖨️ Download PDF Report</button>
         </div>
 
-        <!-- TODAY'S STUDY PLAN -->
         <div class="layer printable" id="plan">
             <h2>🎯 Today's Study Plan</h2>
             <p class="layer-subtitle" id="today-label"></p>
@@ -118,19 +113,19 @@
             <div class="timetable-grid" id="timetable-grid"></div>
         </div>
 
-        <!-- WEAK TOPICS -->
+        <!-- ✅ WEAK TOPICS WITH CHAPTERS -->
         <div class="layer" id="weak">
-            <h2>🧠 Weak Topics</h2>
+            <h2>🧠 Weak Topics & Chapters</h2>
             <p id="weak-subjects"></p>
             <div class="row no-print">
-                <select id="weak-subject-select"></select>
-                <input type="text" id="weak-topic-input" placeholder="e.g., Quadratic equations">
+                <select id="weak-subject-select" onchange="populateChapters()"></select>
+                <select id="weak-chapter-select"></select>
                 <button onclick="addWeak()">+ Add</button>
             </div>
+            <input type="text" id="weak-topic-input" placeholder="Or type a custom topic (optional)..." class="no-print" style="margin-top:6px;">
             <ul class="mod-list" id="weak-list" style="margin-top:0.8rem;"></ul>
         </div>
 
-        <!-- PRACTICE TEST -->
         <div class="layer" id="quiz">
             <h2>📝 Practice Test</h2>
             <p class="layer-subtitle">Quick quiz on your weakest subjects</p>
@@ -139,7 +134,6 @@
             <div id="quiz-result"></div>
         </div>
 
-        <!-- MISTAKE NOTEBOOK -->
         <div class="layer" id="mistakes">
             <h2>📕 Mistake Notebook</h2>
             <p class="layer-subtitle">Write down mistakes so you never repeat them!</p>
@@ -151,14 +145,12 @@
             <ul class="mod-list" id="mistake-list" style="margin-top:0.8rem;"></ul>
         </div>
 
-        <!-- REVISION -->
         <div class="layer" id="revision">
             <h2>🔄 Revision Tracker</h2>
             <p class="layer-subtitle">🔴 = revise today • 🟢 = recently revised</p>
             <ul class="mod-list" id="revision-list"></ul>
         </div>
 
-        <!-- AI DOUBT SOLVER -->
         <div class="layer" id="ai">
             <h2>🤖 AI Doubt Solver</h2>
             <div id="chat-box">
@@ -171,7 +163,6 @@
             <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
         </div>
 
-        <!-- PROGRESS -->
         <div class="layer" id="history">
             <h2>📈 Progress History</h2>
             <canvas id="progressChart"></canvas>
@@ -191,6 +182,70 @@
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     const EMOJIS = { "Math":"📐","Science":"🔬","English":"📚","Hindi":"🖋️","Social Studies":"🌍","Physics":"⚛️","Chemistry":"🧪","Computer Science":"💻","Computer Applications":"💻","Marathi":"📖","Accountancy":"🧾","Business Studies":"💼","Economics":"📈","History":"🏛️","Political Science":"🗳️","Geography":"🗺️" };
+
+    // ========== ✅ FULL CHAPTER DATABASE (NCERT) ==========
+    const CHAPTERS = {
+        "Math": {
+            6: ["Knowing Our Numbers","Whole Numbers","Playing with Numbers","Basic Geometrical Ideas","Fractions","Decimals","Data Handling","Mensuration","Algebra","Ratio and Proportion","Symmetry"],
+            7: ["Integers","Fractions and Decimals","Data Handling","Simple Equations","Lines and Angles","Triangles","Congruence of Triangles","Comparing Quantities","Rational Numbers","Perimeter and Area","Algebraic Expressions","Exponents and Powers","Symmetry","Visualising Solid Shapes"],
+            8: ["Rational Numbers","Linear Equations in One Variable","Understanding Quadrilaterals","Data Handling","Squares and Square Roots","Cubes and Cube Roots","Comparing Quantities","Algebraic Expressions and Identities","Mensuration","Exponents and Powers","Direct and Inverse Proportions","Factorisation","Introduction to Graphs","Playing with Numbers"],
+            9: ["Number Systems","Polynomials","Coordinate Geometry","Linear Equations in Two Variables","Euclid's Geometry","Lines and Angles","Triangles","Quadrilaterals","Areas of Parallelograms and Triangles","Circles","Constructions","Heron's Formula","Surface Areas and Volumes","Statistics","Probability"],
+            10: ["Real Numbers","Polynomials","Pair of Linear Equations in Two Variables","Quadratic Equations","Arithmetic Progressions","Triangles","Coordinate Geometry","Introduction to Trigonometry","Some Applications of Trigonometry","Circles","Areas Related to Circles","Surface Areas and Volumes","Statistics","Probability"],
+            default: ["Algebra","Geometry","Trigonometry","Calculus","Probability","Statistics"]
+        },
+        "Science": {
+            6: ["Food and Its Components","Sorting Materials into Groups","Separation of Substances","Getting to Know Plants","Body Movements in Animals","The Living Organisms and Their Surroundings","Motion and Measurement of Distances","Light, Shadows and Reflections","Electricity and Circuits","Air Around Us","Water"],
+            7: ["Nutrition in Plants","Nutrition in Animals","Heat","Acids, Bases and Salts","Physical and Chemical Changes","Respiration in Organisms","Transportation in Plants and Animals","Reproduction in Plants","Motion and Time","Electric Current and Its Effects","Winds, Storms and Cyclones","Soil"],
+            8: ["Crop Production and Management","Microorganisms: Friend and Foe","Coal and Petroleum","Combustion and Flame","Conservation of Plants and Animals","Force and Pressure","Friction","Sound","Chemical Effects of Electric Current","Some Natural Phenomena","Light","Stars and the Solar System","Pollution of Air and Water"],
+            9: ["Matter in Our Surroundings","Is Matter Around Us Pure?","Atoms and Molecules","Structure of the Atom","The Fundamental Unit of Life","Tissues","Diversity in Living Organisms","Motion","Force and Laws of Motion","Gravitation","Work and Energy","Sound","Why Do We Fall Ill?","Natural Resources","Improvement in Food Resources"],
+            10: ["Chemical Reactions and Equations","Acids, Bases and Salts","Metals and Non-metals","Carbon and Its Compounds","Periodic Classification of Elements","Life Processes","Control and Coordination","How Do Organisms Reproduce?","Heredity and Evolution","Light – Reflection and Refraction","The Human Eye and the Colourful World","Electricity","Magnetic Effects of Electric Current","Sources of Energy","Our Environment","Sustainable Management of Natural Resources"],
+            default: ["Physics Concepts","Chemistry Concepts","Biology Concepts"]
+        },
+        "Physics": {
+            11: ["Units and Measurement","Motion in a Straight Line","Motion in a Plane","Laws of Motion","Work, Energy and Power","System of Particles and Rotational Motion","Gravitation","Mechanical Properties of Solids","Mechanical Properties of Fluids","Thermal Properties","Thermodynamics","Kinetic Theory","Oscillations","Waves"],
+            12: ["Electric Charges and Fields","Electrostatic Potential and Capacitance","Current Electricity","Moving Charges and Magnetism","Magnetism and Matter","Electromagnetic Induction","Alternating Current","Electromagnetic Waves","Ray Optics and Optical Instruments","Wave Optics","Dual Nature of Radiation and Matter","Atoms","Nuclei","Semiconductor Electronics"],
+            default: ["Mechanics","Electrodynamics","Optics","Modern Physics"]
+        },
+        "Chemistry": {
+            11: ["Some Basic Concepts of Chemistry","Structure of Atom","Classification of Elements and Periodicity","Chemical Bonding and Molecular Structure","States of Matter","Thermodynamics","Equilibrium","Redox Reactions","Hydrogen","The s-Block Elements","The p-Block Elements","Organic Chemistry – Basic Principles","Hydrocarbons"],
+            12: ["The Solid State","Solutions","Electrochemistry","Chemical Kinetics","Surface Chemistry","General Principles of Isolation of Elements","The p-Block Elements","The d- and f-Block Elements","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols, Phenols and Ethers","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules","Polymers","Chemistry in Everyday Life"],
+            default: ["Physical Chemistry","Organic Chemistry","Inorganic Chemistry"]
+        },
+        "English": { default: ["Reading Comprehension","Writing Skills (Letter/Essay)","Grammar: Tenses","Grammar: Articles and Prepositions","Grammar: Active-Passive Voice","Poetry and Literature","Vocabulary and Synonyms"] },
+        "Hindi": { default: ["व्याकरण (Grammar)","अपठित गद्यांश (Comprehension)","लेखन (Essay/Letter)","साहित्य (Literature)","रस और अलंकार"] },
+        "Marathi": { default: ["व्याकरण","बोधप्रश्न (Comprehension)","लेखन","साहित्य"] },
+        "Social Studies": {
+            6: ["Understanding Diversity","What, Where, How and When?","Globe: Models and Maps","In the Earliest Days","Ashoka and the Mauryan Empire","Rural and Urban Livelihoods","The Earth in the Solar System"]
+,           7: ["Tracing Changes Through a Thousand Years","New Kings and Kingdoms","The Mughal Empire","Devotional Paths to the Divine","The Making of Regional Cultures","Environment","Air","Water","Our Changing Earth"]
+,           8: ["How, When and Where?","Resources","Land, Soil and Water","Minerals and Power Resources","The Indian Constitution","Understanding Secularism","Why Do We Need a Parliament?","The Freedom Struggle"]
+,           9: ["The French Revolution","Socialism in Europe and the Russian Revolution","Nazism and the Rise of Hitler","Forest Society and Colonialism","Pastoralists in the Modern World","India – Size and Location","Physical Features of India","Climate","Democracy"]
+,           10: ["The Rise of Nationalism in Europe","Nationalism in India","The Making of a Global World","The Age of Industrialisation","Print Culture and the Modern World","Resources and Development","Sectors of the Indian Economy","Money and Credit","Federalism","Political Parties"]
+,           default: ["History","Geography","Civics","Economics"]
+        },
+        "Accountancy": { default: ["Introduction to Accounting","Journal and Ledger","Trial Balance","Bank Reconciliation Statement","Depreciation","Final Accounts","Bills of Exchange","Partnership Accounts","Company Accounts","Share Capital","Debentures","Financial Statements Analysis"] },
+        "Business Studies": { default: ["Nature and Significance of Management","Principles of Management","Business Environment","Planning","Organising","Staffing","Directing","Controlling","Marketing Management","Financial Management"] },
+        "Economics": { default: ["Introduction to Microeconomics","Consumer Equilibrium","Demand and Elasticity","Cost and Revenue","Production","Market Forms","National Income","Money and Banking","Government Budget","Balance of Payments","Development Experience"] },
+        "History": { default: ["Bricks, Beads and Bones","Kings, Farmers and Towns","Kinship, Caste and Class","Thinkers, Beliefs and Buildings","Bhakti-Sufi Traditions","Colonialism and the Countryside","Rebels and the Raj","Nationalism and the Freedom Movement"] },
+        "Political Science": { default: ["The Constitution: Why and How?","Rights in the Indian Constitution","Federalism","Democracy and Diversity","Challenges to Democracy","International Relations","Cold War Era"] },
+        "Geography": { default: ["Physical Geography","Landforms and Their Evolution","Climate","Vegetation and Soils","Population Composition","Human Settlements","Agriculture","Minerals and Energy Resources","Transport and Communication"] },
+        "Computer Science": { default: ["Computer Basics","Number Systems","Programming Logic","Python Basics","Data Types and Variables","Loops and Functions","Lists and Dictionaries","Internet and Cyber Safety"] },
+        "Computer Applications": { default: ["Computer Basics","MS Office (Word/Excel)","Internet Basics","Cyber Safety"] }
+    };
+
+    function chaptersFor(subject, cls){
+        const c = parseInt(cls.replace("Class ", ""));
+        const m = CHAPTERS[subject];
+        if (!m) return [];
+        return m[c] || m.default || [];
+    }
+
+    function populateChapters(){
+        const subj = document.getElementById('weak-subject-select').value;
+        const list = chaptersFor(subj, studentContext.student_class);
+        document.getElementById('weak-chapter-select').innerHTML = list.length
+            ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
+            : '<option value="">No chapter list</option>';
+    }
 
     // ---------- QUIZ BANK ----------
     const QUIZ = {
@@ -272,7 +327,6 @@
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ---------- ANALYZE ----------
     async function analyze() {
         const studyHours = parseFloat(document.getElementById('study_hours').value);
         const startTime = document.getElementById('start_time').value || "16:00";
@@ -335,7 +389,6 @@
     function addTask(di){ const v = prompt("➕ New task:"); if(v && v.trim()){ currentTimetable[di].tasks.push({text:v.trim(), done:false}); renderTimetable(); renderTodayPlan(); } }
     function toggleWeek(){ const tt = document.getElementById('timetable-section'); tt.style.display = tt.style.display === 'none' ? 'block' : 'none'; }
 
-    // ---------- TODAY'S PLAN ----------
     function todayName(){ return new Date().toLocaleDateString('en-US', { weekday: 'long' }); }
     function renderTodayPlan(){
         document.getElementById('today-label').textContent = todayName() + " — tap to mark done ✅";
@@ -350,21 +403,24 @@
         renderTodayPlan(); renderTimetable();
     }
 
-    // ---------- WEAK TOPICS ----------
+    // ---------- WEAK TOPICS WITH CHAPTERS ----------
     function buildSubjectSelects(){
         const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
         document.getElementById('mistake-subject-select').innerHTML = opts;
+        populateChapters();
     }
     function renderWeak(){
         document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak subjects: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects detected!';
         const topics = store.get(studentContext.name + '_weaktopics', []);
-        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>No topics added yet.</li>';
+        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>Select a subject above and add your weak chapters 📖</li>';
     }
     function addWeak(){
         const subj = document.getElementById('weak-subject-select').value;
-        const topic = document.getElementById('weak-topic-input').value.trim();
-        if (!subj || !topic) { alert("Select subject & type a topic"); return; }
+        const custom = document.getElementById('weak-topic-input').value.trim();
+        const chapter = document.getElementById('weak-chapter-select').value;
+        const topic = custom || chapter;
+        if (!subj || !topic || topic === "No chapter list") { alert("Pick a chapter or type a topic!"); return; }
         const key = studentContext.name + '_weaktopics';
         const topics = store.get(key, []); topics.push({subject: subj, topic});
         store.set(key, topics); document.getElementById('weak-topic-input').value = ''; renderWeak();
