@@ -3,74 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Student Performance & Timetable Generator</title>
+    <title>AI Student Performance</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3498db">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
-        .layer { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
+        .layer { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.2rem; }
         h1, h2 { color: #2c3e50; text-align: center; }
-        .layer-title { display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; }
-        .step-badge { background: #3498db; color: white; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-        .layer-subtitle { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem; }
+        h2 { font-size: 1.2rem; }
+        .layer-subtitle { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 1rem; text-align: center; }
         label { display: block; margin-top: 1rem; font-weight: 600; color: #34495e; }
-        input, select { width: 100%; padding: 0.75rem; margin-top: 0.5rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; padding: 1rem; margin-top: 1.5rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+        input, select { width: 100%; padding: 0.7rem; margin-top: 0.4rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        button { width: 100%; padding: 0.9rem; margin-top: 1.2rem; background: #3498db; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
         button:hover { background: #2980b9; }
-        .section { margin-top: 1.5rem; padding: 1.2rem; border-radius: 8px; display: none; }
-        #result { background: #e8f6f3; border-left: 4px solid #27ae60; }
-        #timetable-section { background: #ebf5fb; border-left: 4px solid #3498db; }
-        #error { background: #fdedec; border-left: 4px solid #e74c3c; color: #c0392b; }
+        .dash-nav { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 1.2rem; }
+        .dash-nav a { background: #2c3e50; color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 0.8rem; }
+        .weak-tag { background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; }
         .timetable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 1rem; }
         .day-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #d4e6f1; }
         .day-card h4 { margin: 0 0 8px 0; color: #2980b9; font-size: 0.9rem; text-align: center; }
-        .day-card ul { list-style: none; padding: 0; margin: 0; font-size: 0.75rem; color: #555; }
+        .day-card ul, .mod-list { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
+        .mod-list li { padding: 6px 0; border-bottom: 1px dashed #eee; }
         .day-card li { padding: 4px 0; border-bottom: 1px dashed #eee; }
         .task-text { cursor: pointer; }
         .done-task .task-text { text-decoration: line-through; opacity: 0.55; }
-        .task-controls { float: right; }
-        .mini-btn { width: auto; padding: 0 3px; margin: 0; background: none; border: none; color: inherit; font-size: 0.75rem; cursor: pointer; }
+        .mini-btn { width: auto; padding: 0 4px; margin: 0; background: none; border: none; color: inherit; font-size: 0.75rem; cursor: pointer; }
         .mini-btn:hover { background: none; opacity: 0.7; }
-        .add-btn { width: 100%; padding: 4px; margin-top: 6px; background: #eafaf1; color: #27ae60; border: 1px dashed #27ae60; border-radius: 4px; font-size: 0.75rem; }
-        .add-btn:hover { background: #d5f5e3; }
-        .weak-tag { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; }
-        #layer2 { display: none; }
-        #radar-section { display: none; }
-        #chat-box { max-height: 320px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
-        .chat-msg { padding: 0.7rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
+        .row { display: flex; gap: 8px; margin-top: 0.5rem; }
+        .row input, .row select { margin-top: 0; }
+        .row button { width: auto; margin: 0; padding: 0 14px; }
+        #chat-box { max-height: 300px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
+        .chat-msg { padding: 0.6rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
         .user-msg { background: #3498db; color: white; margin-left: auto; }
         .ai-msg { background: #ecf0f1; color: #2c3e50; }
         .src-tag { font-size: 0.7rem; color: #95a5a6; display: block; margin-top: 4px; }
-        .doubt-row { display: flex; gap: 8px; }
-        .doubt-row input { flex: 1; }
-        .mic-btn { width: 60px; flex-shrink: 0; margin-top: 0.5rem; background: #e74c3c; }
-        .mic-btn:hover { background: #c0392b; }
-        .tt-actions { display: flex; gap: 8px; margin-top: 1rem; }
-        .tt-actions button { margin-top: 0; }
+        .quiz-opt { display: block; font-weight: normal; margin: 4px 0; }
+        .quiz-q { border-bottom: 1px solid #eee; padding: 8px 0; }
+        #layer2, #dashboard { display: none; }
         @media print {
-            body { background: white; margin: 0; }
-            .layer:not(.printable) { display: none !important; }
-            .no-print { display: none !important; }
+            body { background: white; }
+            .layer:not(.printable), .no-print, .dash-nav { display: none !important; }
             .layer { box-shadow: none; border: 1px solid #ddd; }
         }
     </style>
 </head>
 <body>
-    <h1>🎓 AI Study Analyzer & Planner</h1>
+    <h1>🏠 AI Student Performance</h1>
 
-    <!-- LAYER 1 -->
+    <!-- STUDENT PROFILE -->
     <div class="layer">
-        <div class="layer-title"><div class="step-badge">1</div><h2 style="margin:0;">Student Profile</h2></div>
-        <p class="layer-subtitle">Enter name, board and class (stream appears for Class 11–12)</p>
-        <label for="student_name">🙋 Student Name</label>
+        <h2>👤 Student Profile</h2>
+        <label>🙋 Student Name</label>
         <input type="text" id="student_name" placeholder="e.g., Rahul Sharma">
-        <label for="board">Board</label>
+        <label>Board</label>
         <select id="board" onchange="resetLayer2()">
             <option value="" disabled selected>-- Choose board --</option>
             <option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="SSC">SSC (State Board)</option>
         </select>
-        <label for="student_class">Class</label>
+        <label>Class</label>
         <select id="student_class" onchange="toggleStream()">
             <option value="" disabled selected>-- Choose class --</option>
             <option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>
@@ -79,7 +70,7 @@
             <option value="Class 12">Class 12</option>
         </select>
         <div id="stream_wrap" style="display:none;">
-            <label for="stream">Stream</label>
+            <label>Stream</label>
             <select id="stream" onchange="resetLayer2()">
                 <option value="" disabled selected>-- Choose stream --</option>
                 <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Arts">Arts / Humanities</option>
@@ -88,76 +79,156 @@
         <button onclick="submitLayer1()">Next →</button>
     </div>
 
-    <!-- LAYER 2 -->
+    <!-- SCORES -->
     <div class="layer" id="layer2">
-        <div class="layer-title"><div class="step-badge">2</div><h2 style="margin:0;">Lecture Details</h2></div>
+        <h2>📊 Enter Lecture Scores</h2>
         <p class="layer-subtitle" id="layer2-subtitle"></p>
-        <label for="study_hours">Available Study Hours Per Week</label>
+        <label>Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
-        <label for="start_time">⏰ Daily Study Start Time</label>
+        <label>⏰ Daily Study Start Time</label>
         <input type="time" id="start_time" value="16:00">
         <div id="subject_inputs"></div>
-        <button onclick="analyze()">Analyze & Generate Timetable</button>
+        <button onclick="analyze()">Analyze → Open Dashboard</button>
     </div>
 
-    <div class="layer printable">
-        <div id="error" class="section"></div>
-        <div id="result" class="section"></div>
-    </div>
-
-    <div class="layer printable" id="radar-section">
-        <h2>🕸️ Subject Strength Radar</h2>
-        <canvas id="radarChart"></canvas>
-    </div>
-
-    <div class="layer printable" id="timetable-section" style="display:none;">
-        <h2>📅 Personalized Study Timetable</h2>
-        <p style="text-align:center; color:#7f8c8d; font-size:0.8rem;">
-            Tap a task to mark ✅ done • ✏️ edit • ✕ remove • + add your own (coaching, sports, etc.)
-        </p>
-        <div class="timetable-grid" id="timetable-grid"></div>
-        <div class="tt-actions no-print">
-            <button onclick="saveTimetable()" style="background:#27ae60;">💾 Save My Timetable</button>
-            <button onclick="resetTimetable()" style="background:#95a5a6;">🔄 Reset to AI Plan</button>
+    <!-- ✅ DASHBOARD -->
+    <div id="dashboard">
+        <div class="dash-nav no-print">
+            <a href="#plan">🎯 Today's Plan</a><a href="#weak">🧠 Weak Topics</a>
+            <a href="#quiz">📝 Practice Test</a><a href="#mistakes">📕 Mistake Notebook</a>
+            <a href="#revision">🔄 Revision</a><a href="#ai">🤖 AI Solver</a><a href="#history">📈 Progress</a>
         </div>
-    </div>
 
-    <!-- LAYER 3 -->
-    <div class="layer">
-        <div class="layer-title"><div class="step-badge">3</div><h2 style="margin:0;">🤖 Personal AI Doubt Solver</h2></div>
-        <p class="layer-subtitle">Type OR speak 🎤 your doubt — answers tailored to your class & board</p>
-        <div id="chat-box">
-            <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything like:<br>• "What is photosynthesis?"<br>• "Solve 15*8+20"<br>• "Explain fractions simply"</div>
+        <!-- PERFORMANCE DASHBOARD -->
+        <div class="layer printable">
+            <h2>📊 Performance Dashboard</h2>
+            <div id="result"></div>
+            <canvas id="radarChart" style="margin-top:1rem;"></canvas>
+            <button class="no-print" onclick="window.print()" style="background:#27ae60;">🖨️ Download PDF Report</button>
         </div>
-        <div class="doubt-row">
-            <input type="text" id="doubt_input" placeholder="Type or speak your doubt..." onkeydown="if(event.key==='Enter') askDoubt()">
-            <button class="mic-btn no-print" onclick="startVoice()" title="Speak your doubt">🎤</button>
-        </div>
-        <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
-    </div>
 
-    <div class="layer">
-        <h2>📈 Progress History</h2>
-        <canvas id="progressChart"></canvas>
+        <!-- TODAY'S STUDY PLAN -->
+        <div class="layer printable" id="plan">
+            <h2>🎯 Today's Study Plan</h2>
+            <p class="layer-subtitle" id="today-label"></p>
+            <ul class="mod-list" id="today-list"></ul>
+            <button class="no-print" onclick="toggleWeek()" style="background:#7f8c8d;">📅 View / Hide Full Week</button>
+        </div>
+        <div class="layer printable" id="timetable-section" style="display:none;">
+            <div class="timetable-grid" id="timetable-grid"></div>
+        </div>
+
+        <!-- WEAK TOPICS -->
+        <div class="layer" id="weak">
+            <h2>🧠 Weak Topics</h2>
+            <p id="weak-subjects"></p>
+            <div class="row no-print">
+                <select id="weak-subject-select"></select>
+                <input type="text" id="weak-topic-input" placeholder="e.g., Quadratic equations">
+                <button onclick="addWeak()">+ Add</button>
+            </div>
+            <ul class="mod-list" id="weak-list" style="margin-top:0.8rem;"></ul>
+        </div>
+
+        <!-- PRACTICE TEST -->
+        <div class="layer" id="quiz">
+            <h2>📝 Practice Test</h2>
+            <p class="layer-subtitle">Quick quiz on your weakest subjects</p>
+            <button class="no-print" onclick="startQuiz()">🚀 Start Practice Test</button>
+            <div id="quiz-area"></div>
+            <div id="quiz-result"></div>
+        </div>
+
+        <!-- MISTAKE NOTEBOOK -->
+        <div class="layer" id="mistakes">
+            <h2>📕 Mistake Notebook</h2>
+            <p class="layer-subtitle">Write down mistakes so you never repeat them!</p>
+            <div class="row no-print">
+                <select id="mistake-subject-select"></select>
+                <input type="text" id="mistake-input" placeholder="e.g., Forgot to change sign">
+                <button onclick="addMistake()">+ Add</button>
+            </div>
+            <ul class="mod-list" id="mistake-list" style="margin-top:0.8rem;"></ul>
+        </div>
+
+        <!-- REVISION -->
+        <div class="layer" id="revision">
+            <h2>🔄 Revision Tracker</h2>
+            <p class="layer-subtitle">🔴 = revise today • 🟢 = recently revised</p>
+            <ul class="mod-list" id="revision-list"></ul>
+        </div>
+
+        <!-- AI DOUBT SOLVER -->
+        <div class="layer" id="ai">
+            <h2>🤖 AI Doubt Solver</h2>
+            <div id="chat-box">
+                <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything!</div>
+            </div>
+            <div class="row">
+                <input type="text" id="doubt_input" placeholder="Type or speak your doubt..." onkeydown="if(event.key==='Enter') askDoubt()">
+                <button class="no-print" style="background:#e74c3c; width:60px;" onclick="startVoice()">🎤</button>
+            </div>
+            <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="layer" id="history">
+            <h2>📈 Progress History</h2>
+            <canvas id="progressChart"></canvas>
+        </div>
     </div>
 
     <script>
-    let myChart = null;
-    let myRadar = null;
-    let currentTimetable = null;
-    let aiTimetable = null;
+    let myChart = null, myRadar = null;
+    let currentTimetable = null, aiTimetable = null;
+    let lastScores = {}, lastWeak = [], revSubjects = [], quizData = [];
     let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
 
-    const EMOJIS = {
-        "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
-        "Social Studies": "🌍", "Physics": "⚛️", "Chemistry": "🧪",
-        "Computer Science": "💻", "Computer Applications": "💻",
-        "Marathi": "📖", "Accountancy": "🧾", "Business Studies": "💼",
-        "Economics": "📈", "History": "🏛️", "Political Science": "🗳️",
-        "Geography": "🗺️"
+    const store = {
+        get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
+        set(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
     };
-
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    const EMOJIS = { "Math":"📐","Science":"🔬","English":"📚","Hindi":"🖋️","Social Studies":"🌍","Physics":"⚛️","Chemistry":"🧪","Computer Science":"💻","Computer Applications":"💻","Marathi":"📖","Accountancy":"🧾","Business Studies":"💼","Economics":"📈","History":"🏛️","Political Science":"🗳️","Geography":"🗺️" };
+
+    // ---------- QUIZ BANK ----------
+    const QUIZ = {
+        Math: [
+            {q:"15% of 200 = ?", a:["20","30","40","25"], c:1},
+            {q:"12 × 8 + 4 = ?", a:["96","100","104","98"], c:1},
+            {q:"Square root of 144 = ?", a:["10","11","12","14"], c:2},
+            {q:"If x + 5 = 12, then x = ?", a:["6","7","8","9"], c:1},
+            {q:"Area of a triangle = ?", a:["b×h","½×b×h","b+h","2bh"], c:1}
+        ],
+        Science: [
+            {q:"Gas absorbed by plants?", a:["Oxygen","Nitrogen","CO2","Hydrogen"], c:2},
+            {q:"Unit of force?", a:["Joule","Newton","Watt","Pascal"], c:1},
+            {q:"Water boils at?", a:["90°C","100°C","80°C","120°C"], c:1},
+            {q:"Powerhouse of the cell?", a:["Nucleus","Mitochondria","Ribosome","Chloroplast"], c:1},
+            {q:"Speed of light (approx)?", a:["3×10⁸ m/s","3×10⁶ m/s","3×10⁵ m/s","3×10⁷ m/s"], c:0}
+        ],
+        English: [
+            {q:"Synonym of 'Happy'?", a:["Sad","Joyful","Angry","Tired"], c:1},
+            {q:"Antonym of 'Begin'?", a:["Start","End","Open","Run"], c:1},
+            {q:"Plural of 'Child'?", a:["Childs","Children","Childes","Child"], c:1},
+            {q:"Past tense of 'Go'?", a:["Goed","Went","Gone","Going"], c:1},
+            {q:"Article before 'apple'?", a:["A","An","The","None"], c:1}
+        ],
+        Social: [
+            {q:"First PM of India?", a:["Nehru","Gandhi","Patel","Rajendra Prasad"], c:0},
+            {q:"Longest river in India?", a:["Yamuna","Ganga","Godavari","Brahmaputra"], c:1},
+            {q:"Constitution adopted in?", a:["1947","1950","1952","1949"], c:1},
+            {q:"Taj Mahal is in?", a:["Delhi","Jaipur","Agra","Lucknow"], c:2},
+            {q:"India's national animal?", a:["Lion","Tiger","Elephant","Leopard"], c:1}
+        ]
+    };
+    function quizFor(s){
+        if (/math/i.test(s)) return QUIZ.Math;
+        if (/science|physics|chemistry|biology/i.test(s)) return QUIZ.Science;
+        if (/english|hindi|marathi/i.test(s)) return QUIZ.English;
+        return QUIZ.Social;
+    }
 
     function getSubjects(board, cls, stream) {
         const c = parseInt(cls.replace("Class ", ""));
@@ -173,17 +244,13 @@
     }
 
     function toggleStream() {
-        const cls = document.getElementById('student_class').value;
-        const c = parseInt(cls.replace("Class ", ""));
+        const c = parseInt(document.getElementById('student_class').value.replace("Class ", ""));
         document.getElementById('stream_wrap').style.display = (c >= 11) ? 'block' : 'none';
         resetLayer2();
     }
-
     function resetLayer2() {
         document.getElementById('layer2').style.display = 'none';
-        document.getElementById('timetable-section').style.display = 'none';
-        document.getElementById('result').style.display = 'none';
-        document.getElementById('radar-section').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'none';
     }
 
     function submitLayer1() {
@@ -192,27 +259,11 @@
         const cls = document.getElementById('student_class').value;
         const c = parseInt(cls.replace("Class ", ""));
         const stream = (c >= 11) ? document.getElementById('stream').value : "None";
-
-        if (!board || !cls || (c >= 11 && !stream)) {
-            alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + " first!");
-            return;
-        }
-        studentContext.name = name;
-        studentContext.board = board;
-        studentContext.student_class = cls;
-        studentContext.stream = stream;
-
-        const saved = localStorage.getItem('tt_' + name);
-        if (saved) {
-            try {
-                currentTimetable = JSON.parse(saved);
-                renderTimetable();
-            } catch (e) {}
-        }
+        if (!board || !cls || (c >= 11 && !stream)) { alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + "!"); return; }
+        studentContext = { name, board, student_class: cls, stream, weak_subjects: [] };
 
         const subjects = getSubjects(board, cls, stream);
-        document.getElementById('layer2-subtitle').textContent =
-            `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
+        document.getElementById('layer2-subtitle').textContent = `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
         document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
             <label>${EMOJIS[s] || '📘'} ${s} Score (%)</label>
             <input type="number" class="subject-score" data-subject="${s}" min="0" max="100" placeholder="e.g., 70">
@@ -221,77 +272,8 @@
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function toObj(tt) {
-        return tt.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) }));
-    }
-
-    function renderTimetable() {
-        const grid = document.getElementById('timetable-grid');
-        grid.innerHTML = currentTimetable.map((day, di) => `
-            <div class="day-card">
-                <h4>${day.day}</h4>
-                <ul>
-                    ${day.tasks.map((t, ti) => `
-                        <li class="${t.done ? 'done-task' : ''}">
-                            <span class="task-text" onclick="toggleTask(${di},${ti})">${t.done ? '✅' : '⬜'} ${escapeHtml(t.text)}</span>
-                            <span class="task-controls no-print">
-                                <button class="mini-btn" onclick="editTask(${di},${ti})" title="Edit">✏️</button>
-                                <button class="mini-btn" onclick="deleteTask(${di},${ti})" title="Remove">✕</button>
-                            </span>
-                        </li>
-                    `).join('')}
-                </ul>
-                <button class="add-btn no-print" onclick="addTask(${di})">+ Add task</button>
-            </div>
-        `).join('');
-        document.getElementById('timetable-section').style.display = 'block';
-    }
-
-    function toggleTask(di, ti) {
-        currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done;
-        renderTimetable();
-    }
-
-    function deleteTask(di, ti) {
-        currentTimetable[di].tasks.splice(ti, 1);
-        renderTimetable();
-    }
-
-    function editTask(di, ti) {
-        const cur = currentTimetable[di].tasks[ti].text;
-        const val = prompt("✏️ Edit task:", cur);
-        if (val !== null && val.trim()) {
-            currentTimetable[di].tasks[ti].text = val.trim();
-            renderTimetable();
-        }
-    }
-
-    function addTask(di) {
-        const val = prompt("➕ New task for " + currentTimetable[di].day + " (e.g., '🏏 Sports 5 PM'):", "");
-        if (val && val.trim()) {
-            currentTimetable[di].tasks.push({ text: val.trim(), done: false });
-            renderTimetable();
-        }
-    }
-
-    function saveTimetable() {
-        localStorage.setItem('tt_' + studentContext.name, JSON.stringify(currentTimetable));
-        alert("💾 Timetable saved for " + studentContext.name + "! It will load automatically next time.");
-    }
-
-    function resetTimetable() {
-        if (!aiTimetable) { alert("Generate an AI plan first!"); return; }
-        currentTimetable = toObj(aiTimetable);
-        localStorage.removeItem('tt_' + studentContext.name);
-        renderTimetable();
-    }
-
+    // ---------- ANALYZE ----------
     async function analyze() {
-        const resultDiv = document.getElementById('result');
-        const errorDiv = document.getElementById('error');
-        resultDiv.style.display = 'none';
-        errorDiv.style.display = 'none';
-
         const studyHours = parseFloat(document.getElementById('study_hours').value);
         const startTime = document.getElementById('start_time').value || "16:00";
         const subjectScores = {};
@@ -301,145 +283,183 @@
             if (isNaN(v)) valid = false;
             subjectScores[inp.dataset.subject] = v;
         });
-
-        if (isNaN(studyHours) || !valid) {
-            errorDiv.textContent = "Please fill in ALL fields.";
-            errorDiv.style.display = 'block';
-            return;
-        }
+        if (isNaN(studyHours) || !valid) { alert("Please fill ALL fields!"); return; }
 
         try {
             const response = await fetch('/predict', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    student_name: studentContext.name,
-                    board: studentContext.board,
-                    student_class: studentContext.student_class,
-                    stream: studentContext.stream,
-                    study_hours: studyHours,
-                    start_time: startTime,
-                    subject_scores: subjectScores
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_name: studentContext.name, board: studentContext.board, student_class: studentContext.student_class, stream: studentContext.stream, study_hours: studyHours, start_time: startTime, subject_scores: subjectScores })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
             studentContext.weak_subjects = data.weak_subjects;
+            lastScores = subjectScores; lastWeak = data.weak_subjects;
 
-            resultDiv.innerHTML = `
-                <p style="font-size:0.8rem; color:#7f8c8d; margin:0;">📄 Report for <strong>${studentContext.name}</strong> • ${studentContext.board} • ${studentContext.student_class}${studentContext.stream !== "None" ? " • " + studentContext.stream : ""} • ${new Date().toLocaleDateString()}</p>
-                <h3>🎯 ${studentContext.name}, your Performance Level: ${data.performance_level}</h3>
-                <p><strong>Average Score:</strong> ${data.average_score}% | <strong>Confidence:</strong> ${data.confidence}%</p>
-                ${data.weak_subjects.length > 0 ?
-                    `<p><strong>⚠️ Weak Subjects:</strong> ${data.weak_subjects.map(s => `<span class="weak-tag">${s}</span>`).join(' ')}</p>` :
-                    '<p><strong>✅ No weak subjects detected!</strong></p>'}
-                <div style="margin-top:1rem;">
-                    <strong>💡 Recommendations:</strong>
-                    <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>
-                </div>
-                <button class="no-print" onclick="window.print()" style="margin-top:1rem; background:#27ae60;">🖨️ Download PDF Report</button>
-            `;
-            resultDiv.style.display = 'block';
+            document.getElementById('result').innerHTML = `
+                <p style="text-align:center; font-size:0.8rem; color:#7f8c8d;">📄 ${studentContext.name} • ${studentContext.board} • ${studentContext.student_class} • ${new Date().toLocaleDateString()}</p>
+                <h3 style="text-align:center;">🎯 ${data.performance_level}</h3>
+                <p style="text-align:center;"><strong>Avg:</strong> ${data.average_score}% • <strong>Confidence:</strong> ${data.confidence}%</p>
+                <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>`;
 
-            const radarSection = document.getElementById('radar-section');
-            radarSection.style.display = 'block';
             const rctx = document.getElementById('radarChart').getContext('2d');
             if (myRadar) myRadar.destroy();
-            myRadar = new Chart(rctx, {
-                type: 'radar',
-                data: {
-                    labels: Object.keys(subjectScores),
-                    datasets: [{
-                        label: studentContext.name,
-                        data: Object.values(subjectScores),
-                        backgroundColor: 'rgba(52,152,219,0.2)',
-                        borderColor: '#3498db',
-                        pointBackgroundColor: '#2980b9'
-                    }]
-                },
-                options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } }
-            });
+            myRadar = new Chart(rctx, { type: 'radar', data: { labels: Object.keys(subjectScores), datasets: [{ label: studentContext.name, data: Object.values(subjectScores), backgroundColor: 'rgba(52,152,219,0.2)', borderColor: '#3498db' }] }, options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
 
             aiTimetable = data.timetable;
             currentTimetable = toObj(data.timetable);
-            renderTimetable();
 
+            document.getElementById('dashboard').style.display = 'block';
+            buildSubjectSelects();
+            renderTodayPlan(); renderWeak(); renderMistakes(); renderRevision(); renderTimetable();
             loadChart();
-        } catch (err) {
-            errorDiv.textContent = `Error: ${err.message}`;
-            errorDiv.style.display = 'block';
-        }
+            document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
+        } catch (err) { alert("Error: " + err.message); }
     }
 
-    function startVoice() {
+    function toObj(tt){ return tt.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) })); }
+
+    function renderTimetable() {
+        document.getElementById('timetable-grid').innerHTML = currentTimetable.map((day, di) => `
+            <div class="day-card"><h4>${day.day}</h4><ul>
+                ${day.tasks.map((t, ti) => `<li class="${t.done?'done-task':''}">
+                    <span class="task-text" onclick="toggleTask(${di},${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span>
+                    <span class="no-print"><button class="mini-btn" onclick="editTask(${di},${ti})">✏️</button><button class="mini-btn" onclick="deleteTask(${di},${ti})">✕</button></span>
+                </li>`).join('')}
+            </ul><button class="mini-btn no-print" style="color:#27ae60;" onclick="addTask(${di})">+ Add task</button></div>
+        `).join('');
+    }
+    function toggleTask(di,ti){ currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done; store.set('tt_'+studentContext.name, currentTimetable); renderTimetable(); renderTodayPlan(); }
+    function deleteTask(di,ti){ currentTimetable[di].tasks.splice(ti,1); renderTimetable(); renderTodayPlan(); }
+    function editTask(di,ti){ const v = prompt("✏️ Edit task:", currentTimetable[di].tasks[ti].text); if(v && v.trim()){ currentTimetable[di].tasks[ti].text = v.trim(); renderTimetable(); renderTodayPlan(); } }
+    function addTask(di){ const v = prompt("➕ New task:"); if(v && v.trim()){ currentTimetable[di].tasks.push({text:v.trim(), done:false}); renderTimetable(); renderTodayPlan(); } }
+    function toggleWeek(){ const tt = document.getElementById('timetable-section'); tt.style.display = tt.style.display === 'none' ? 'block' : 'none'; }
+
+    // ---------- TODAY'S PLAN ----------
+    function todayName(){ return new Date().toLocaleDateString('en-US', { weekday: 'long' }); }
+    function renderTodayPlan(){
+        document.getElementById('today-label').textContent = todayName() + " — tap to mark done ✅";
+        const today = (currentTimetable || []).find(d => d.day === todayName());
+        document.getElementById('today-list').innerHTML = today ? today.tasks.map((t, ti) => `
+            <li class="${t.done?'done-task':''}"><span class="task-text" onclick="toggleToday(${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span></li>`).join('') : '<li>Generate your plan first.</li>';
+    }
+    function toggleToday(ti){
+        const today = currentTimetable.find(d => d.day === todayName());
+        today.tasks[ti].done = !today.tasks[ti].done;
+        store.set('tt_'+studentContext.name, currentTimetable);
+        renderTodayPlan(); renderTimetable();
+    }
+
+    // ---------- WEAK TOPICS ----------
+    function buildSubjectSelects(){
+        const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
+        document.getElementById('weak-subject-select').innerHTML = opts;
+        document.getElementById('mistake-subject-select').innerHTML = opts;
+    }
+    function renderWeak(){
+        document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak subjects: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects detected!';
+        const topics = store.get(studentContext.name + '_weaktopics', []);
+        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>No topics added yet.</li>';
+    }
+    function addWeak(){
+        const subj = document.getElementById('weak-subject-select').value;
+        const topic = document.getElementById('weak-topic-input').value.trim();
+        if (!subj || !topic) { alert("Select subject & type a topic"); return; }
+        const key = studentContext.name + '_weaktopics';
+        const topics = store.get(key, []); topics.push({subject: subj, topic});
+        store.set(key, topics); document.getElementById('weak-topic-input').value = ''; renderWeak();
+    }
+    function delWeak(i){ const key = studentContext.name + '_weaktopics'; const t = store.get(key, []); t.splice(i,1); store.set(key,t); renderWeak(); }
+
+    // ---------- PRACTICE TEST ----------
+    function startQuiz(){
+        const subjects = Object.keys(lastScores);
+        if (!subjects.length) { alert("Analyze your profile first!"); return; }
+        const weakest = [...subjects].sort((a,b) => lastScores[a]-lastScores[b]).slice(0,3);
+        quizData = [];
+        weakest.forEach(s => quizFor(s).slice(0,3).forEach(q => quizData.push({...q, subject: s})));
+        document.getElementById('quiz-result').innerHTML = '';
+        document.getElementById('quiz-area').innerHTML = quizData.map((q,i) => `
+            <div class="quiz-q"><p><strong>Q${i+1}.</strong> ${escapeHtml(q.q)} <em>(${escapeHtml(q.subject)})</em></p>
+            ${q.a.map((opt,oi) => `<label class="quiz-opt"><input type="radio" name="q${i}" value="${oi}"> ${escapeHtml(opt)}</label>`).join('')}</div>`).join('') +
+            `<button onclick="submitQuiz()">Submit Test ✅</button>`;
+    }
+    function submitQuiz(){
+        let correct = 0;
+        quizData.forEach((q,i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); if (sel && parseInt(sel.value) === q.c) correct++; });
+        const pct = Math.round(correct / quizData.length * 100);
+        const msg = pct >= 80 ? '🌟 Excellent! Keep it up!' : pct >= 50 ? '👍 Good — revise the wrong ones!' : '📕 Add wrong questions to Mistake Notebook & revise!';
+        document.getElementById('quiz-result').innerHTML = `<h3>Score: ${pct}% (${correct}/${quizData.length})</h3><p>${msg}</p>`;
+    }
+
+    // ---------- MISTAKE NOTEBOOK ----------
+    function renderMistakes(){
+        const list = store.get(studentContext.name + '_mistakes', []);
+        document.getElementById('mistake-list').innerHTML = list.map((m,i) => `<li><strong>${escapeHtml(m.subject)}:</strong> ${escapeHtml(m.note)} <em>(${m.date})</em> <button class="mini-btn" onclick="delMistake(${i})">✕</button></li>`).join('') || '<li>No mistakes recorded — great! 🎉</li>';
+    }
+    function addMistake(){
+        const subj = document.getElementById('mistake-subject-select').value;
+        const note = document.getElementById('mistake-input').value.trim();
+        if (!subj || !note) { alert("Select subject & describe the mistake"); return; }
+        const key = studentContext.name + '_mistakes';
+        const list = store.get(key, []); list.unshift({subject: subj, note, date: new Date().toLocaleDateString()});
+        store.set(key, list); document.getElementById('mistake-input').value = ''; renderMistakes();
+    }
+    function delMistake(i){ const key = studentContext.name + '_mistakes'; const l = store.get(key, []); l.splice(i,1); store.set(key,l); renderMistakes(); }
+
+    // ---------- REVISION ----------
+    function renderRevision(){
+        revSubjects = Object.keys(lastScores);
+        const rev = store.get(studentContext.name + '_revision', {});
+        document.getElementById('revision-list').innerHTML = revSubjects.map((s,i) => {
+            const last = rev[s];
+            const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+            const flag = (days === null || days >= 2) ? '🔴' : '🟢';
+            return `<li>${flag} <strong>${escapeHtml(s)}</strong> — ${days === null ? 'Never revised' : `Revised ${days} day(s) ago`} <button class="mini-btn" onclick="markRevised(${i})">✅ Revised today</button></li>`;
+        }).join('') || '<li>Analyze first to track revisions.</li>';
+    }
+    function markRevised(i){
+        const key = studentContext.name + '_revision';
+        const rev = store.get(key, {}); rev[revSubjects[i]] = new Date().toISOString();
+        store.set(key, rev); renderRevision();
+    }
+
+    // ---------- AI CHAT ----------
+    function startVoice(){
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) { alert("Voice input not supported in this browser. Please type your doubt."); return; }
-        const rec = new SR();
-        rec.lang = 'en-IN';
-        rec.interimResults = false;
-        rec.onresult = (e) => {
-            document.getElementById('doubt_input').value = e.results[0][0].transcript;
-        };
-        rec.onerror = () => alert("🎤 Could not hear you. Try again!");
+        if (!SR) { alert("Voice not supported — please type."); return; }
+        const rec = new SR(); rec.lang = 'en-IN';
+        rec.onresult = e => { document.getElementById('doubt_input').value = e.results[0][0].transcript; };
+        rec.onerror = () => alert("🎤 Could not hear you!");
         rec.start();
     }
-
-    // ✅ CRASH-PROOF AI CHAT
-    async function askDoubt() {
+    async function askDoubt(){
         const input = document.getElementById('doubt_input');
-        const q = input.value.trim();
-        if (!q) return;
+        const q = input.value.trim(); if (!q) return;
         const box = document.getElementById('chat-box');
-        box.innerHTML += `<div class="chat-msg user-msg">${escapeHtml(q)}</div>`;
-        input.value = '';
-        box.innerHTML += `<div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
-        box.scrollTop = box.scrollHeight;
-
-        const removeThinking = () => { const t = document.getElementById('thinking'); if (t) t.remove(); };
-
+        box.innerHTML += `<div class="chat-msg user-msg">${escapeHtml(q)}</div><div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
+        input.value = ''; box.scrollTop = box.scrollHeight;
+        const rm = () => { const t = document.getElementById('thinking'); if (t) t.remove(); };
         try {
-            const response = await fetch('/ask', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: q,
-                    board: studentContext.board,
-                    student_class: studentContext.student_class,
-                    stream: studentContext.stream,
-                    weak_subjects: studentContext.weak_subjects
-                })
-            });
+            const response = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, board: studentContext.board, student_class: studentContext.student_class, stream: studentContext.stream, weak_subjects: studentContext.weak_subjects }) });
             const text = await response.text();
-            let data = null;
-            try { data = JSON.parse(text); } catch (e) { data = null; }
-            removeThinking();
+            let data = null; try { data = JSON.parse(text); } catch(e) {}
+            rm();
             if (data && data.answer) {
                 const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
                 box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
-            } else {
-                box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server is waking up or busy. Wait ~10 seconds and ask again!</div>`;
-            }
-        } catch (err) {
-            removeThinking();
-            box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — the free server may be waking up. Wait 10 seconds and try again!</div>`;
-        }
+            } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — wait 10s and ask again!</div>`;
+        } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — try again in 10s!</div>`; }
         box.scrollTop = box.scrollHeight;
     }
 
-    async function loadChart() {
+    async function loadChart(){
         try {
             const response = await fetch('/history');
-            const historyData = await response.json();
-            const labels = historyData.map(r => new Date(r.timestamp).toLocaleDateString()).reverse();
-            const avgScores = historyData.map(r => r.avg_score).reverse();
+            const h = await response.json();
             const ctx = document.getElementById('progressChart').getContext('2d');
             if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets: [{ label: 'Average Score', data: avgScores, borderColor: '#27ae60', tension: 0.3, fill: false }] },
-                options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
-            });
+            myChart = new Chart(ctx, { type: 'line', data: { labels: h.map(r => new Date(r.timestamp).toLocaleDateString()).reverse(), datasets: [{ label: 'Average Score', data: h.map(r => r.avg_score).reverse(), borderColor: '#27ae60', tension: 0.3 }] }, options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } } });
         } catch (err) { console.error(err); }
     }
     window.onload = loadChart;
