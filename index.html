@@ -113,7 +113,6 @@
             <div class="timetable-grid" id="timetable-grid"></div>
         </div>
 
-        <!-- ✅ WEAK TOPICS WITH CHAPTERS -->
         <div class="layer" id="weak">
             <h2>🧠 Weak Topics & Chapters</h2>
             <p id="weak-subjects"></p>
@@ -128,15 +127,16 @@
 
         <div class="layer" id="quiz">
             <h2>📝 Practice Test</h2>
-            <p class="layer-subtitle">Quick quiz on your weakest subjects</p>
+            <p class="layer-subtitle">Quick quiz OR AI test on your weak chapters</p>
             <button class="no-print" onclick="startQuiz()">🚀 Start Practice Test</button>
+            <button class="no-print" onclick="startWeakTest()" style="background:#e67e22;">🎯 Test My Weak Chapters (AI)</button>
             <div id="quiz-area"></div>
             <div id="quiz-result"></div>
         </div>
 
         <div class="layer" id="mistakes">
             <h2>📕 Mistake Notebook</h2>
-            <p class="layer-subtitle">Write down mistakes so you never repeat them!</p>
+            <p class="layer-subtitle">Wrong test answers are saved here automatically!</p>
             <div class="row no-print">
                 <select id="mistake-subject-select"></select>
                 <input type="text" id="mistake-input" placeholder="e.g., Forgot to change sign">
@@ -183,7 +183,6 @@
 
     const EMOJIS = { "Math":"📐","Science":"🔬","English":"📚","Hindi":"🖋️","Social Studies":"🌍","Physics":"⚛️","Chemistry":"🧪","Computer Science":"💻","Computer Applications":"💻","Marathi":"📖","Accountancy":"🧾","Business Studies":"💼","Economics":"📈","History":"🏛️","Political Science":"🗳️","Geography":"🗺️" };
 
-    // ========== ✅ FULL CHAPTER DATABASE (NCERT) ==========
     const CHAPTERS = {
         "Math": {
             6: ["Knowing Our Numbers","Whole Numbers","Playing with Numbers","Basic Geometrical Ideas","Fractions","Decimals","Data Handling","Mensuration","Algebra","Ratio and Proportion","Symmetry"],
@@ -194,7 +193,7 @@
             default: ["Algebra","Geometry","Trigonometry","Calculus","Probability","Statistics"]
         },
         "Science": {
-            6: ["Food and Its Components","Sorting Materials into Groups","Separation of Substances","Getting to Know Plants","Body Movements in Animals","The Living Organisms and Their Surroundings","Motion and Measurement of Distances","Light, Shadows and Reflections","Electricity and Circuits","Air Around Us","Water"],
+            6: ["Food and Its Components","Sorting Materials into Groups","Separation of Substances","Getting to Know Plants","Body Movements in Animals","The Living Organisms and Their Surroundings","Motion and Measurement","Light, Shadows and Reflections","Electricity and Circuits","Air Around Us","Water"],
             7: ["Nutrition in Plants","Nutrition in Animals","Heat","Acids, Bases and Salts","Physical and Chemical Changes","Respiration in Organisms","Transportation in Plants and Animals","Reproduction in Plants","Motion and Time","Electric Current and Its Effects","Winds, Storms and Cyclones","Soil"],
             8: ["Crop Production and Management","Microorganisms: Friend and Foe","Coal and Petroleum","Combustion and Flame","Conservation of Plants and Animals","Force and Pressure","Friction","Sound","Chemical Effects of Electric Current","Some Natural Phenomena","Light","Stars and the Solar System","Pollution of Air and Water"],
             9: ["Matter in Our Surroundings","Is Matter Around Us Pure?","Atoms and Molecules","Structure of the Atom","The Fundamental Unit of Life","Tissues","Diversity in Living Organisms","Motion","Force and Laws of Motion","Gravitation","Work and Energy","Sound","Why Do We Fall Ill?","Natural Resources","Improvement in Food Resources"],
@@ -202,25 +201,25 @@
             default: ["Physics Concepts","Chemistry Concepts","Biology Concepts"]
         },
         "Physics": {
-            11: ["Units and Measurement","Motion in a Straight Line","Motion in a Plane","Laws of Motion","Work, Energy and Power","System of Particles and Rotational Motion","Gravitation","Mechanical Properties of Solids","Mechanical Properties of Fluids","Thermal Properties","Thermodynamics","Kinetic Theory","Oscillations","Waves"],
-            12: ["Electric Charges and Fields","Electrostatic Potential and Capacitance","Current Electricity","Moving Charges and Magnetism","Magnetism and Matter","Electromagnetic Induction","Alternating Current","Electromagnetic Waves","Ray Optics and Optical Instruments","Wave Optics","Dual Nature of Radiation and Matter","Atoms","Nuclei","Semiconductor Electronics"],
+            11: ["Units and Measurement","Motion in a Straight Line","Motion in a Plane","Laws of Motion","Work, Energy and Power","System of Particles and Rotational Motion","Gravitation","Thermodynamics","Oscillations","Waves"],
+            12: ["Electric Charges and Fields","Electrostatic Potential and Capacitance","Current Electricity","Moving Charges and Magnetism","Electromagnetic Induction","Alternating Current","Ray Optics and Optical Instruments","Wave Optics","Dual Nature of Radiation and Matter","Atoms","Nuclei","Semiconductor Electronics"],
             default: ["Mechanics","Electrodynamics","Optics","Modern Physics"]
         },
         "Chemistry": {
-            11: ["Some Basic Concepts of Chemistry","Structure of Atom","Classification of Elements and Periodicity","Chemical Bonding and Molecular Structure","States of Matter","Thermodynamics","Equilibrium","Redox Reactions","Hydrogen","The s-Block Elements","The p-Block Elements","Organic Chemistry – Basic Principles","Hydrocarbons"],
-            12: ["The Solid State","Solutions","Electrochemistry","Chemical Kinetics","Surface Chemistry","General Principles of Isolation of Elements","The p-Block Elements","The d- and f-Block Elements","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols, Phenols and Ethers","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules","Polymers","Chemistry in Everyday Life"],
+            11: ["Some Basic Concepts of Chemistry","Structure of Atom","Classification of Elements and Periodicity","Chemical Bonding and Molecular Structure","States of Matter","Thermodynamics","Equilibrium","Redox Reactions","Organic Chemistry – Basic Principles","Hydrocarbons"],
+            12: ["Solutions","Electrochemistry","Chemical Kinetics","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols, Phenols and Ethers","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules","Polymers"],
             default: ["Physical Chemistry","Organic Chemistry","Inorganic Chemistry"]
         },
         "English": { default: ["Reading Comprehension","Writing Skills (Letter/Essay)","Grammar: Tenses","Grammar: Articles and Prepositions","Grammar: Active-Passive Voice","Poetry and Literature","Vocabulary and Synonyms"] },
         "Hindi": { default: ["व्याकरण (Grammar)","अपठित गद्यांश (Comprehension)","लेखन (Essay/Letter)","साहित्य (Literature)","रस और अलंकार"] },
         "Marathi": { default: ["व्याकरण","बोधप्रश्न (Comprehension)","लेखन","साहित्य"] },
         "Social Studies": {
-            6: ["Understanding Diversity","What, Where, How and When?","Globe: Models and Maps","In the Earliest Days","Ashoka and the Mauryan Empire","Rural and Urban Livelihoods","The Earth in the Solar System"]
-,           7: ["Tracing Changes Through a Thousand Years","New Kings and Kingdoms","The Mughal Empire","Devotional Paths to the Divine","The Making of Regional Cultures","Environment","Air","Water","Our Changing Earth"]
-,           8: ["How, When and Where?","Resources","Land, Soil and Water","Minerals and Power Resources","The Indian Constitution","Understanding Secularism","Why Do We Need a Parliament?","The Freedom Struggle"]
-,           9: ["The French Revolution","Socialism in Europe and the Russian Revolution","Nazism and the Rise of Hitler","Forest Society and Colonialism","Pastoralists in the Modern World","India – Size and Location","Physical Features of India","Climate","Democracy"]
-,           10: ["The Rise of Nationalism in Europe","Nationalism in India","The Making of a Global World","The Age of Industrialisation","Print Culture and the Modern World","Resources and Development","Sectors of the Indian Economy","Money and Credit","Federalism","Political Parties"]
-,           default: ["History","Geography","Civics","Economics"]
+            6: ["Understanding Diversity","What, Where, How and When?","Globe: Models and Maps","In the Earliest Days","Ashoka and the Mauryan Empire","Rural and Urban Livelihoods","The Earth in the Solar System"],
+            7: ["Tracing Changes Through a Thousand Years","New Kings and Kingdoms","The Mughal Empire","Devotional Paths to the Divine","The Making of Regional Cultures","Environment","Air","Water","Our Changing Earth"],
+            8: ["How, When and Where?","Resources","Land, Soil and Water","Minerals and Power Resources","The Indian Constitution","Understanding Secularism","Why Do We Need a Parliament?","The Freedom Struggle"],
+            9: ["The French Revolution","Socialism in Europe and the Russian Revolution","Nazism and the Rise of Hitler","Forest Society and Colonialism","Pastoralists in the Modern World","India – Size and Location","Physical Features of India","Climate","Democracy"],
+            10: ["The Rise of Nationalism in Europe","Nationalism in India","The Making of a Global World","The Age of Industrialisation","Print Culture and the Modern World","Resources and Development","Sectors of the Indian Economy","Money and Credit","Federalism","Political Parties"],
+            default: ["History","Geography","Civics","Economics"]
         },
         "Accountancy": { default: ["Introduction to Accounting","Journal and Ledger","Trial Balance","Bank Reconciliation Statement","Depreciation","Final Accounts","Bills of Exchange","Partnership Accounts","Company Accounts","Share Capital","Debentures","Financial Statements Analysis"] },
         "Business Studies": { default: ["Nature and Significance of Management","Principles of Management","Business Environment","Planning","Organising","Staffing","Directing","Controlling","Marketing Management","Financial Management"] },
@@ -247,7 +246,6 @@
             : '<option value="">No chapter list</option>';
     }
 
-    // ---------- QUIZ BANK ----------
     const QUIZ = {
         Math: [
             {q:"15% of 200 = ?", a:["20","30","40","25"], c:1},
@@ -403,7 +401,6 @@
         renderTodayPlan(); renderTimetable();
     }
 
-    // ---------- WEAK TOPICS WITH CHAPTERS ----------
     function buildSubjectSelects(){
         const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
@@ -435,16 +432,55 @@
         quizData = [];
         weakest.forEach(s => quizFor(s).slice(0,3).forEach(q => quizData.push({...q, subject: s})));
         document.getElementById('quiz-result').innerHTML = '';
-        document.getElementById('quiz-area').innerHTML = quizData.map((q,i) => `
-            <div class="quiz-q"><p><strong>Q${i+1}.</strong> ${escapeHtml(q.q)} <em>(${escapeHtml(q.subject)})</em></p>
+        renderQuiz("🚀 Quick Quiz (offline)");
+    }
+
+    async function startWeakTest(){
+        const topics = store.get(studentContext.name + '_weaktopics', []);
+        let items = topics.map(t => ({subject: t.subject, topic: t.topic}));
+        if (!items.length) items = lastWeak.map(s => ({subject: s, topic: "full syllabus"}));
+        if (!items.length) { alert("First add your weak chapters in 🧠 Weak Topics!"); return; }
+        document.getElementById('quiz-area').innerHTML = '<p>🤖 AI is writing your personal test on weak chapters... wait ~10 seconds.</p>';
+        document.getElementById('quiz-result').innerHTML = '';
+        try {
+            const response = await fetch('/generate_test', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ board: studentContext.board, student_class: studentContext.student_class, items })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.questions) throw new Error('no questions');
+            quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4 && typeof q.c === 'number');
+            if (!quizData.length) throw new Error('invalid');
+            renderQuiz(data.source === 'gemini' ? '🎯 AI Weak-Chapter Test ✨' : '🎯 Weak-Subject Test (offline)');
+        } catch (err) {
+            document.getElementById('quiz-area').innerHTML = '<p>❌ Could not generate the test right now. Try the Quick Quiz!</p>';
+        }
+    }
+
+    function renderQuiz(title){
+        document.getElementById('quiz-area').innerHTML = `<h3>${title}</h3>` + quizData.map((q,i) => `
+            <div class="quiz-q"><p><strong>Q${i+1}.</strong> ${escapeHtml(q.q)} <em>(${escapeHtml(q.subject || '')})</em></p>
             ${q.a.map((opt,oi) => `<label class="quiz-opt"><input type="radio" name="q${i}" value="${oi}"> ${escapeHtml(opt)}</label>`).join('')}</div>`).join('') +
             `<button onclick="submitQuiz()">Submit Test ✅</button>`;
     }
+
     function submitQuiz(){
         let correct = 0;
-        quizData.forEach((q,i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); if (sel && parseInt(sel.value) === q.c) correct++; });
+        const wrong = [];
+        quizData.forEach((q,i) => {
+            const sel = document.querySelector(`input[name="q${i}"]:checked`);
+            if (sel && parseInt(sel.value) === q.c) correct++;
+            else wrong.push(q);
+        });
         const pct = Math.round(correct / quizData.length * 100);
-        const msg = pct >= 80 ? '🌟 Excellent! Keep it up!' : pct >= 50 ? '👍 Good — revise the wrong ones!' : '📕 Add wrong questions to Mistake Notebook & revise!';
+        if (wrong.length) {
+            const key = studentContext.name + '_mistakes';
+            const list = store.get(key, []);
+            wrong.forEach(q => list.unshift({ subject: q.subject || 'General', note: `❌ ${q.q} → ✅ ${q.a[q.c]}`, date: new Date().toLocaleDateString() }));
+            store.set(key, list);
+            renderMistakes();
+        }
+        const msg = pct >= 80 ? '🌟 Excellent! Keep it up!' : pct >= 50 ? '👍 Good — wrong questions saved to your Mistake Notebook!' : '📕 Wrong questions saved to Mistake Notebook — revise them!';
         document.getElementById('quiz-result').innerHTML = `<h3>Score: ${pct}% (${correct}/${quizData.length})</h3><p>${msg}</p>`;
     }
 

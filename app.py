@@ -61,6 +61,11 @@ class DoubtInput(BaseModel):
     stream: str = "None"
     weak_subjects: List[str] = []
 
+class TestGenInput(BaseModel):
+    board: str = ""
+    student_class: str = ""
+    items: List[Dict[str, str]] = []
+
 # ---------- OFFLINE TUTOR ----------
 def eval_expr(expr):
     allowed = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul,
@@ -136,6 +141,67 @@ async def ask(data: DoubtInput):
                     print(f"⚠️ Gemini {model_name} failed: {e}")
                     break
     return {"answer": fallback_tutor(data.question), "source": "offline"}
+
+# ---------- ✅ AI TEST GENERATOR ----------
+SERVER_QUIZ = {
+    "Math": [
+        {"q": "15% of 200 = ?", "a": ["20","30","40","25"], "c": 1},
+        {"q": "12 × 8 + 4 = ?", "a": ["96","100","104","98"], "c": 1},
+        {"q": "Square root of 144 = ?", "a": ["10","11","12","14"], "c": 2},
+    ],
+    "Science": [
+        {"q": "Gas absorbed by plants?", "a": ["Oxygen","Nitrogen","CO2","Hydrogen"], "c": 2},
+        {"q": "Unit of force?", "a": ["Joule","Newton","Watt","Pascal"], "c": 1},
+        {"q": "Powerhouse of the cell?", "a": ["Nucleus","Mitochondria","Ribosome","Chloroplast"], "c": 1},
+    ],
+    "English": [
+        {"q": "Synonym of 'Happy'?", "a": ["Sad","Joyful","Angry","Tired"], "c": 1},
+        {"q": "Plural of 'Child'?", "a": ["Childs","Children","Childes","Child"], "c": 1},
+        {"q": "Past tense of 'Go'?", "a": ["Goed","Went","Gone","Going"], "c": 1},
+    ],
+    "Social": [
+        {"q": "First PM of India?", "a": ["Nehru","Gandhi","Patel","Rajendra Prasad"], "c": 0},
+        {"q": "Longest river in India?", "a": ["Yamuna","Ganga","Godavari","Brahmaputra"], "c": 1},
+        {"q": "Taj Mahal is in?", "a": ["Delhi","Jaipur","Agra","Lucknow"], "c": 2},
+    ]
+}
+
+def server_quiz_for(subject):
+    if re.search(r"math", subject, re.I): return SERVER_QUIZ["Math"]
+    if re.search(r"science|physics|chemistry|biology", subject, re.I): return SERVER_QUIZ["Science"]
+    if re.search(r"english|hindi|marathi", subject, re.I): return SERVER_QUIZ["English"]
+    return SERVER_QUIZ["Social"]
+
+@app.post("/generate_test")
+async def generate_test(data: TestGenInput):
+    if GEMINI_API_KEY and data.items:
+        topics_txt = "; ".join(f"{i.get('subject','')}: {i.get('topic','')}" for i in data.items[:6])
+        for model_name in GEMINI_MODELS:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                prompt = (f"You are an expert teacher for {data.board} {data.student_class}. "
+                          f"Create exactly 5 multiple-choice questions on these weak topics: {topics_txt}. "
+                          f"Each question must have 4 options and exactly one correct answer. "
+                          f"Respond ONLY with a valid JSON array, no extra text: "
+                          f'[{{"subject":"Math","q":"question text","a":["opt1","opt2","opt3","opt4"],"c":0}}]')
+                r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=40)
+                if r.status_code != 200:
+                    print(f"⚠️ Test-gen {model_name} error {r.status_code}")
+                    continue
+                text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+                m = re.search(r"\[.*\]", text, re.S)
+                questions = json.loads(m.group(0))
+                if not isinstance(questions, list) or not questions:
+                    raise ValueError("empty")
+                print(f"✅ AI test generated via {model_name} ({len(questions)} questions)")
+                return {"questions": questions, "source": "gemini"}
+            except Exception as e:
+                print(f"⚠️ Test-gen {model_name} failed: {e}")
+    questions = []
+    subjects = list({i.get("subject", "Math") for i in data.items}) or ["Math"]
+    for s in subjects[:3]:
+        questions += [{**q, "subject": s} for q in server_quiz_for(s)][:3]
+    return {"questions": questions, "source": "offline"}
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
