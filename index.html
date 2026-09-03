@@ -129,9 +129,14 @@
 
         <div class="layer" id="quiz">
             <h2>📝 Practice Test</h2>
-            <p class="layer-subtitle">Quick quiz OR AI test on your weak chapters</p>
+            <p class="layer-subtitle">Quick quiz • AI weak-chapter test • ANY chapter test</p>
             <button class="no-print" onclick="startQuiz()">🚀 Start Practice Test</button>
             <button class="no-print" onclick="startWeakTest()" style="background:#e67e22;">🎯 Test My Weak Chapters (AI)</button>
+            <div class="row no-print" style="margin-top:0.8rem;">
+                <select id="test-subject-select" onchange="populateTestChapters()"></select>
+                <select id="test-chapter-select"></select>
+                <button onclick="startChapterTest()" style="background:#16a085; margin:0;">📚 Chapter Test</button>
+            </div>
             <div id="quiz-area"></div>
             <div id="quiz-result"></div>
         </div>
@@ -156,7 +161,7 @@
         <div class="layer" id="ai">
             <h2>🤖 AI Doubt Solver</h2>
             <div id="chat-box">
-                <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything!</div>
+                <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything — even "give me notes of chapter X"!</div>
             </div>
             <div class="row">
                 <input type="text" id="doubt_input" placeholder="Type or speak your doubt..." onkeydown="if(event.key==='Enter') askDoubt()">
@@ -168,6 +173,23 @@
         <div class="layer" id="history">
             <h2>📈 Progress History</h2>
             <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 👨‍🏫 TEACHER VIEW -->
+    <div class="layer" id="teacher">
+        <h2>👨 Teacher View: Class Test Data</h2>
+        <p class="layer-subtitle">Every analysis saved on the server — view & export</p>
+        <button class="no-print" onclick="loadRecords()" style="background:#8e44ad;">📊 Load Test Data</button>
+        <button class="no-print" onclick="downloadCSV()" style="background:#27ae60;">⬇️ Download CSV (Excel)</button>
+        <div style="overflow-x:auto; margin-top:1rem;">
+            <table id="records-table" style="width:100%; border-collapse:collapse; font-size:0.75rem; display:none;">
+                <thead><tr style="background:#2c3e50; color:white;">
+                    <th style="padding:6px;">Date</th><th style="padding:6px;">Name</th><th style="padding:6px;">Class</th>
+                    <th style="padding:6px;">Board</th><th style="padding:6px;">Avg</th><th style="padding:6px;">Level</th><th style="padding:6px;">Subject Scores</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
@@ -183,7 +205,7 @@
     };
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    // ---------- 🔊 FUN SOUNDS & CONFETTI ----------
+    // ---------- 🔊 SOUNDS & CONFETTI ----------
     let soundOn = localStorage.getItem('soundOn') !== '0';
     let audioCtx = null;
     function updateSoundIcon(){ const b = document.getElementById('sound-toggle'); if (b) b.textContent = soundOn ? '🔊' : '🔇'; }
@@ -208,7 +230,7 @@
         } catch(e) {}
     }
     function confetti(){
-        const emojis = ['🎉','🎊','⭐','🌟','✨','🏆',''];
+        const emojis = ['🎉','🎊','⭐','🌟','✨','🏆','📚'];
         for (let i = 0; i < 30; i++) {
             const el = document.createElement('div');
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -284,6 +306,14 @@
         document.getElementById('weak-chapter-select').innerHTML = list.length
             ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
             : '<option value="">No chapter list</option>';
+    }
+
+    function populateTestChapters(){
+        const subj = document.getElementById('test-subject-select').value;
+        const list = chaptersFor(subj, studentContext.student_class);
+        document.getElementById('test-chapter-select').innerHTML = list.length
+            ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
+            : '<option value="">No chapters</option>';
     }
 
     const QUIZ = {
@@ -448,7 +478,9 @@
         const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
         document.getElementById('mistake-subject-select').innerHTML = opts;
+        document.getElementById('test-subject-select').innerHTML = opts;
         populateChapters();
+        populateTestChapters();
     }
     function renderWeak(){
         document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak subjects: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects detected!';
@@ -467,7 +499,7 @@
     }
     function delWeak(i){ const key = studentContext.name + '_weaktopics'; const t = store.get(key, []); t.splice(i,1); store.set(key,t); renderWeak(); }
 
-    // ---------- PRACTICE TEST ----------
+    // ---------- PRACTICE TESTS ----------
     function startQuiz(){
         const subjects = Object.keys(lastScores);
         if (!subjects.length) { alert("Analyze your profile first!"); return; }
@@ -483,7 +515,18 @@
         let items = topics.map(t => ({subject: t.subject, topic: t.topic}));
         if (!items.length) items = lastWeak.map(s => ({subject: s, topic: "full syllabus"}));
         if (!items.length) { alert("First add your weak chapters in 🧠 Weak Topics!"); return; }
-        document.getElementById('quiz-area').innerHTML = '<p>🤖 AI is writing your personal test on weak chapters... wait ~10 seconds.</p>';
+        await runTest(items, null);
+    }
+
+    async function startChapterTest(){
+        const subj = document.getElementById('test-subject-select').value;
+        const chapter = document.getElementById('test-chapter-select').value;
+        if (!subj || !chapter || chapter === 'No chapters') { alert('Pick a subject and chapter!'); return; }
+        await runTest([{subject: subj, topic: chapter}], chapter);
+    }
+
+    async function runTest(items, chapterTitle){
+        document.getElementById('quiz-area').innerHTML = '<p>🤖 AI is writing your personal test... wait ~10 seconds.</p>';
         document.getElementById('quiz-result').innerHTML = '';
         try {
             const response = await fetch('/generate_test', {
@@ -494,7 +537,10 @@
             if (!response.ok || !data.questions) throw new Error('no questions');
             quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4 && typeof q.c === 'number');
             if (!quizData.length) throw new Error('invalid');
-            renderQuiz(data.source === 'gemini' ? '🎯 AI Weak-Chapter Test ✨' : '🎯 Weak-Subject Test (offline)');
+            const title = chapterTitle
+                ? `📚 Chapter Test: ${escapeHtml(chapterTitle)} ${data.source === 'gemini' ? '✨' : '(offline)'}`
+                : (data.source === 'gemini' ? '🎯 AI Weak-Chapter Test ✨' : '🎯 Weak-Subject Test (offline)');
+            renderQuiz(title);
         } catch (err) {
             document.getElementById('quiz-area').innerHTML = '<p>❌ Could not generate the test right now. Try the Quick Quiz!</p>';
         }
@@ -590,6 +636,46 @@
             } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — wait 10s and ask again!</div>`;
         } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — try again in 10s!</div>`; }
         box.scrollTop = box.scrollHeight;
+    }
+
+    // ---------- 👨 TEACHER VIEW ----------
+    let allRecords = [];
+    async function loadRecords(){
+        try {
+            const response = await fetch('/records');
+            allRecords = await response.json();
+            const tbody = document.querySelector('#records-table tbody');
+            tbody.innerHTML = allRecords.map(r => `
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:6px;">${new Date(r.timestamp).toLocaleDateString()}</td>
+                    <td style="padding:6px;">${escapeHtml(r.student_name || 'Student')}</td>
+                    <td style="padding:6px;">${escapeHtml(r.student_class)}</td>
+                    <td style="padding:6px;">${escapeHtml(r.board)}</td>
+                    <td style="padding:6px;"><strong>${r.avg_score}%</strong></td>
+                    <td style="padding:6px;">${escapeHtml(r.performance_level)}</td>
+                    <td style="padding:6px;">${Object.entries(r.subject_scores || {}).map(([s,v]) => `${s}:${v}`).join(', ')}</td>
+                </tr>`).join('') || '<tr><td colspan="7" style="padding:8px;">No data yet.</td></tr>';
+            document.getElementById('records-table').style.display = 'table';
+            playSound('correct');
+        } catch (err) { alert('Could not load records.'); }
+    }
+
+    function downloadCSV(){
+        if (!allRecords.length) { alert('Load data first!'); return; }
+        const rows = [['Date','Name','Board','Class','Stream','Study Hours/Week','Avg Score','Performance Level','Subject Scores']];
+        allRecords.forEach(r => rows.push([
+            new Date(r.timestamp).toLocaleDateString(),
+            r.student_name || 'Student',
+            r.board, r.student_class, r.stream, r.study_hours, r.avg_score, r.performance_level,
+            Object.entries(r.subject_scores || {}).map(([s,v]) => `${s}:${v}`).join(' | ')
+        ]));
+        const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'class_test_data.csv';
+        a.click();
+        playSound('success');
     }
 
     async function loadChart(){

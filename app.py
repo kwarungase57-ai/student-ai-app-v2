@@ -68,7 +68,6 @@ class TestGenInput(BaseModel):
 
 # ---------- ✅ SELF-HEALING GEMINI CALLER ----------
 def gemini_answer(prompt):
-    """Tries models; auto-discovers the correct model from Google's 404 message."""
     if not GEMINI_API_KEY:
         return None, None
     models_to_try = list(GEMINI_MODELS)
@@ -88,7 +87,6 @@ def gemini_answer(prompt):
                     return answer, model_name
                 print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:250]}")
                 if r.status_code == 404:
-                    # Google tells us the replacement model in the error — use it!
                     m = re.search(r"(gemini-[a-z0-9.\-]+)", r.text)
                     if m and m.group(1) not in tried:
                         models_to_try.append(m.group(1))
@@ -146,16 +144,37 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
+# ---------- ✅ AI DOUBT SOLVER + CHAPTER NOTES ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
-    prompt = (f"You are a friendly personal tutor. {context} "
-              f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
-              f"Student doubt: {data.question}")
+    ql = data.question.lower()
+    wants_chapter = any(w in ql for w in ["chapter", "notes", "summary", "text of", "full topic"])
+
+    if wants_chapter:
+        prompt = (f"You are a friendly personal tutor. {context} "
+                  f"The student wants chapter content. Provide a well-structured study summary with: "
+                  f"1) Chapter overview  2) Key concepts & definitions  3) Important formulas/points  "
+                  f"4) One solved example  5) Quick revision tips. "
+                  f"Use simple language suitable for their class. Keep under 500 words.\n\n"
+                  f"Student request: {data.question}")
+    else:
+        prompt = (f"You are a friendly personal tutor. {context} "
+                  f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
+                  f"Student doubt: {data.question}")
+
     answer, model_name = gemini_answer(prompt)
     if answer:
+        if wants_chapter:
+            answer += "\n\n📕 For the exact official chapter text (free): https://ncert.nic.in/textbook.php"
         return {"answer": answer, "source": "gemini"}
+
+    if wants_chapter:
+        return {
+            "answer": "📕 I can't print the full copyrighted textbook text, but you can read it FREE on the official NCERT website: https://ncert.nic.in/textbook.php\n\nMeanwhile, ask me any topic or question from the chapter and I'll explain it simply!",
+            "source": "offline"
+        }
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
 # ---------- AI TEST GENERATOR ----------
@@ -372,6 +391,25 @@ async def get_history():
             "timestamp": r.timestamp.isoformat(),
             "student_class": r.student_class,
             "avg_score": r.avg_score
+        } for r in records]
+    finally:
+        db.close()
+
+@app.get("/records")
+async def get_records():
+    db = SessionLocal()
+    try:
+        records = db.query(StudentRecord).order_by(StudentRecord.timestamp.desc()).limit(100).all()
+        return [{
+            "timestamp": r.timestamp.isoformat(),
+            "student_name": r.student_name,
+            "board": r.board,
+            "student_class": r.student_class,
+            "stream": r.stream,
+            "study_hours": r.study_hours,
+            "avg_score": r.avg_score,
+            "subject_scores": json.loads(r.subject_scores),
+            "performance_level": r.performance_level
         } for r in records]
     finally:
         db.close()
