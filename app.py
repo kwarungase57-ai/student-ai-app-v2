@@ -31,7 +31,9 @@ if GEMINI_API_KEY:
 else:
     print("⚠️ No GEMINI_API_KEY found — using offline tutor")
 
-GEMINI_MODELS = ["gemini-2.6-flash", "gemini-flash-latest", "gemini-2.5-flash"]
+GEMINI_MODELS = ["gemini-2.6-flash", "gemini-2.6-flash-lite", "gemini-flash-latest",
+                 "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash",
+                 "gemini-2.0-flash-lite", "gemini-2.0-flash"]
 
 EMOJIS = {
     "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -144,7 +146,6 @@ def fallback_tutor(q):
         return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
     return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
 
-# ---------- ✅ AI DOUBT SOLVER + CHAPTER NOTES ----------
 @app.post("/ask")
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
@@ -231,6 +232,46 @@ async def generate_test(data: TestGenInput):
     for s in subjects[:3]:
         questions += [{**q, "subject": s} for q in server_quiz_for(s)][:3]
     return {"questions": questions, "source": "offline"}
+
+# ---------- 🎓 CAREER GUIDANCE ENGINE ----------
+CAREER_TRACKS = {
+    "Engineering & Technology": ["Physics", "Math"],
+    "Software, IT & AI": ["Computer Science", "Computer Applications", "Math"],
+    "Medical & Healthcare": ["Biology", "Chemistry", "Science"],
+    "Pure Science & Research": ["Physics", "Chemistry", "Science"],
+    "Data Science & Statistics": ["Math", "Economics"],
+    "Commerce, Finance & CA": ["Accountancy", "Business Studies", "Economics"],
+    "Business & Management": ["Business Studies", "Economics", "English"],
+    "Law, Civil Services & Administration": ["Political Science", "History", "Social Studies"],
+    "Humanities, Teaching & Psychology": ["History", "Geography", "Hindi"],
+    "Media, Writing & Languages": ["English", "Hindi", "Marathi"],
+    "Design, Arts & Creativity": ["English", "Social Studies", "Science"],
+}
+
+CAREER_ROLES = {
+    "Engineering & Technology": ["Mechanical / Civil / Electrical Engineer", "Robotics & Automation Specialist", "ISRO / DRDO Scientist"],
+    "Software, IT & AI": ["Software Developer", "AI / ML Engineer", "Cybersecurity Expert"],
+    "Medical & Healthcare": ["Doctor (MBBS)", "Pharmacist / Drug Researcher", "Biotech Scientist"],
+    "Pure Science & Research": ["Research Scientist", "Astrophysicist", "Lab Specialist"],
+    "Data Science & Statistics": ["Data Scientist", "Statistician", "Business Analyst"],
+    "Commerce, Finance & CA": ["Chartered Accountant (CA)", "Investment Banker", "Financial Advisor"],
+    "Business & Management": ["Entrepreneur / Startup Founder", "Marketing Manager", "HR Manager"],
+    "Law, Civil Services & Administration": ["IAS / IPS Officer", "Lawyer / Judge", "Policy Analyst"],
+    "Humanities, Teaching & Psychology": ["Teacher / Professor", "Psychologist", "Social Worker / NGO Leader"],
+    "Media, Writing & Languages": ["Journalist", "Content Writer / Author", "Translator / Language Expert"],
+    "Design, Arts & Creativity": ["Graphic / UI Designer", "Animator", "Architect (with Math)"],
+}
+
+def suggest_careers(subject_scores):
+    results = []
+    for track, subjects in CAREER_TRACKS.items():
+        present = [s for s in subjects if s in subject_scores]
+        if not present:
+            continue
+        avg = sum(subject_scores[s] for s in present) / len(present)
+        results.append({"track": track, "roles": CAREER_ROLES[track], "match": round(avg)})
+    results.sort(key=lambda x: x["match"], reverse=True)
+    return results[:3]
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
@@ -377,7 +418,8 @@ async def predict(data: StudentInput):
             "average_score": round(avg, 1),
             "weak_subjects": weak_subjects,
             "recommendations": recommendations,
-            "timetable": timetable
+            "timetable": timetable,
+            "careers": suggest_careers(data.subject_scores)
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

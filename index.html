@@ -94,7 +94,7 @@
     <div id="dashboard">
         <div class="dash-nav no-print">
             <a href="#plan">🎯 Today's Plan</a><a href="#weak">🧠 Weak Topics</a>
-            <a href="#quiz">📝 Practice Test</a><a href="#mistakes">📕 Mistake Notebook</a>
+            <a href="#career">🎓 Careers</a><a href="#quiz">📝 Practice Test</a><a href="#mistakes">📕 Mistake Notebook</a>
             <a href="#revision">🔄 Revision</a><a href="#ai">🤖 AI Solver</a><a href="#history">📈 Progress</a>
         </div>
 
@@ -113,6 +113,13 @@
         </div>
         <div class="layer printable" id="timetable-section" style="display:none;">
             <div class="timetable-grid" id="timetable-grid"></div>
+        </div>
+
+        <!-- 🎓 CAREER GUIDANCE -->
+        <div class="layer printable" id="career">
+            <h2>🎓 Career Guidance</h2>
+            <p class="layer-subtitle">Top career paths matched to your strongest subjects</p>
+            <div id="career-list"></div>
         </div>
 
         <div class="layer" id="weak">
@@ -176,7 +183,7 @@
         </div>
     </div>
 
-    <!-- 👨‍🏫 TEACHER VIEW -->
+    <!-- 👨‍ TEACHER VIEW -->
     <div class="layer" id="teacher">
         <h2>👨 Teacher View: Class Test Data</h2>
         <p class="layer-subtitle">Every analysis saved on the server — view & export</p>
@@ -230,7 +237,7 @@
         } catch(e) {}
     }
     function confetti(){
-        const emojis = ['🎉','🎊','⭐','🌟','✨','🏆','📚'];
+        const emojis = ['🎉','','⭐','🌟','✨','🏆',''];
         for (let i = 0; i < 30; i++) {
             const el = document.createElement('div');
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -427,6 +434,16 @@
             const rctx = document.getElementById('radarChart').getContext('2d');
             if (myRadar) myRadar.destroy();
             myRadar = new Chart(rctx, { type: 'radar', data: { labels: Object.keys(subjectScores), datasets: [{ label: studentContext.name, data: Object.values(subjectScores), backgroundColor: 'rgba(52,152,219,0.2)', borderColor: '#3498db' }] }, options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
+
+            // 🎓 CAREER GUIDANCE
+            document.getElementById('career-list').innerHTML = (data.careers || []).map(c => `
+                <div style="border:1px solid #d4e6f1; border-radius:8px; padding:10px; margin-top:10px; background:#f8fbff;">
+                    <strong>${escapeHtml(c.track)}</strong>
+                    <span class="weak-tag" style="background:#27ae60;">${c.match}% match</span>
+                    <ul style="margin:6px 0 0 0; padding-left:1.2rem; font-size:0.85rem; color:#555;">
+                        ${c.roles.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+                    </ul>
+                </div>`).join('') || '<p>Analyze to see career options.</p>';
 
             aiTimetable = data.timetable;
             currentTimetable = toObj(data.timetable);
