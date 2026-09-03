@@ -50,6 +50,8 @@
 </head>
 <body>
     <h1>🏠 AI Student Performance</h1>
+    <button id="sound-toggle" class="no-print" onclick="toggleSound()" title="Sound on/off"
+        style="position:fixed; top:12px; right:12px; width:48px; height:48px; padding:0; margin:0; background:#2c3e50; border-radius:50%; z-index:999;">🔊</button>
 
     <div class="layer">
         <h2>👤 Student Profile</h2>
@@ -180,6 +182,44 @@
         set(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
     };
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ---------- 🔊 FUN SOUNDS & CONFETTI ----------
+    let soundOn = localStorage.getItem('soundOn') !== '0';
+    let audioCtx = null;
+    function updateSoundIcon(){ const b = document.getElementById('sound-toggle'); if (b) b.textContent = soundOn ? '🔊' : '🔇'; }
+    function toggleSound(){ soundOn = !soundOn; localStorage.setItem('soundOn', soundOn ? '1' : '0'); updateSoundIcon(); }
+    function playSound(type){
+        if (!soundOn) return;
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = audioCtx, now = ctx.currentTime;
+            const beep = (freq, start, dur, wave='sine', vol=0.18) => {
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = wave; o.frequency.value = freq;
+                g.gain.setValueAtTime(vol, now + start);
+                g.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(now + start); o.stop(now + start + dur);
+            };
+            if (type === 'click')   beep(650, 0, 0.06, 'square', 0.06);
+            if (type === 'correct') { beep(880, 0, 0.1); beep(1175, 0.12, 0.2); }
+            if (type === 'wrong')   { beep(220, 0, 0.2, 'sawtooth', 0.12); beep(160, 0.22, 0.3, 'sawtooth', 0.12); }
+            if (type === 'success') { beep(523,0,0.15); beep(659,0.16,0.15); beep(784,0.32,0.2); beep(1047,0.5,0.4); }
+        } catch(e) {}
+    }
+    function confetti(){
+        const emojis = ['🎉','🎊','⭐','🌟','✨','🏆',''];
+        for (let i = 0; i < 30; i++) {
+            const el = document.createElement('div');
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.cssText = `position:fixed; top:-40px; left:${Math.random()*100}vw; font-size:${14+Math.random()*20}px; z-index:9998; pointer-events:none; transition: transform ${2+Math.random()*2}s linear, opacity 3s;`;
+            document.body.appendChild(el);
+            requestAnimationFrame(() => { el.style.transform = `translateY(115vh) rotate(${Math.random()*720}deg)`; el.style.opacity = '0'; });
+            setTimeout(() => el.remove(), 4500);
+        }
+    }
+    document.addEventListener('click', e => { if (e.target.closest('button')) playSound('click'); });
+    window.addEventListener('load', updateSoundIcon);
 
     const EMOJIS = { "Math":"📐","Science":"🔬","English":"📚","Hindi":"🖋️","Social Studies":"🌍","Physics":"⚛️","Chemistry":"🧪","Computer Science":"💻","Computer Applications":"💻","Marathi":"📖","Accountancy":"🧾","Business Studies":"💼","Economics":"📈","History":"🏛️","Political Science":"🗳️","Geography":"🗺️" };
 
@@ -362,6 +402,8 @@
             currentTimetable = toObj(data.timetable);
 
             document.getElementById('dashboard').style.display = 'block';
+            if (data.performance_level === 'Excellent') { confetti(); playSound('success'); }
+            else playSound('correct');
             buildSubjectSelects();
             renderTodayPlan(); renderWeak(); renderMistakes(); renderRevision(); renderTimetable();
             loadChart();
@@ -397,6 +439,7 @@
     function toggleToday(ti){
         const today = currentTimetable.find(d => d.day === todayName());
         today.tasks[ti].done = !today.tasks[ti].done;
+        if (today.tasks[ti].done) playSound('correct');
         store.set('tt_'+studentContext.name, currentTimetable);
         renderTodayPlan(); renderTimetable();
     }
@@ -473,6 +516,9 @@
             else wrong.push(q);
         });
         const pct = Math.round(correct / quizData.length * 100);
+        if (pct >= 80) { confetti(); playSound('success'); }
+        else if (pct >= 50) playSound('correct');
+        else playSound('wrong');
         if (wrong.length) {
             const key = studentContext.name + '_mistakes';
             const list = store.get(key, []);
@@ -513,7 +559,7 @@
     function markRevised(i){
         const key = studentContext.name + '_revision';
         const rev = store.get(key, {}); rev[revSubjects[i]] = new Date().toISOString();
-        store.set(key, rev); renderRevision();
+        store.set(key, rev); renderRevision(); playSound('correct');
     }
 
     // ---------- AI CHAT ----------
@@ -540,6 +586,7 @@
             if (data && data.answer) {
                 const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
                 box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
+                playSound('correct');
             } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — wait 10s and ask again!</div>`;
         } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — try again in 10s!</div>`; }
         box.scrollTop = box.scrollHeight;
