@@ -31,7 +31,7 @@ if GEMINI_API_KEY:
 else:
     print("⚠️ No GEMINI_API_KEY found — using offline tutor")
 
-GEMINI_MODELS = ["gemini-2.6-flash", "gemini-flash-latest"]
+GEMINI_MODELS = ["gemini-2.6-flash", "gemini-flash-latest", "gemini-2.5-flash"]
 
 EMOJIS = {
     "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
@@ -65,6 +65,39 @@ class TestGenInput(BaseModel):
     board: str = ""
     student_class: str = ""
     items: List[Dict[str, str]] = []
+
+# ---------- ✅ SELF-HEALING GEMINI CALLER ----------
+def gemini_answer(prompt):
+    """Tries models; auto-discovers the correct model from Google's 404 message."""
+    if not GEMINI_API_KEY:
+        return None, None
+    models_to_try = list(GEMINI_MODELS)
+    tried = set()
+    for _ in range(4):
+        for model_name in models_to_try:
+            if model_name in tried:
+                continue
+            tried.add(model_name)
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=40)
+                if r.status_code == 200:
+                    out = r.json()
+                    answer = out["candidates"][0]["content"]["parts"][0]["text"]
+                    print(f"✅ Gemini answered via {model_name}")
+                    return answer, model_name
+                print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:250]}")
+                if r.status_code == 404:
+                    # Google tells us the replacement model in the error — use it!
+                    m = re.search(r"(gemini-[a-z0-9.\-]+)", r.text)
+                    if m and m.group(1) not in tried:
+                        models_to_try.append(m.group(1))
+                        print(f"🔁 Discovered newer model: {m.group(1)}")
+                elif r.status_code in (503, 429):
+                    time.sleep(2)
+            except Exception as e:
+                print(f"⚠️ Gemini {model_name} failed: {e}")
+    return None, None
 
 # ---------- OFFLINE TUTOR ----------
 def eval_expr(expr):
@@ -117,32 +150,15 @@ def fallback_tutor(q):
 async def ask(data: DoubtInput):
     context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
-    if GEMINI_API_KEY:
-        for model_name in GEMINI_MODELS:
-            for attempt in range(2):
-                try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                    prompt = (f"You are a friendly personal tutor. {context} "
-                              f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
-                              f"Student doubt: {data.question}")
-                    r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
-                    if r.status_code == 503 and attempt == 0:
-                        print(f"⚠️ {model_name} busy — retrying in 2s...")
-                        time.sleep(2)
-                        continue
-                    if r.status_code != 200:
-                        print(f"⚠️ Gemini {model_name} error {r.status_code}: {r.text[:200]}")
-                        break
-                    out = r.json()
-                    answer = out["candidates"][0]["content"]["parts"][0]["text"]
-                    print(f"✅ Gemini answered via {model_name}")
-                    return {"answer": answer, "source": "gemini"}
-                except Exception as e:
-                    print(f"⚠️ Gemini {model_name} failed: {e}")
-                    break
+    prompt = (f"You are a friendly personal tutor. {context} "
+              f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
+              f"Student doubt: {data.question}")
+    answer, model_name = gemini_answer(prompt)
+    if answer:
+        return {"answer": answer, "source": "gemini"}
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
-# ---------- ✅ AI TEST GENERATOR ----------
+# ---------- AI TEST GENERATOR ----------
 SERVER_QUIZ = {
     "Math": [
         {"q": "15% of 200 = ?", "a": ["20","30","40","25"], "c": 1},
@@ -174,29 +190,23 @@ def server_quiz_for(subject):
 
 @app.post("/generate_test")
 async def generate_test(data: TestGenInput):
-    if GEMINI_API_KEY and data.items:
+    if data.items:
         topics_txt = "; ".join(f"{i.get('subject','')}: {i.get('topic','')}" for i in data.items[:6])
-        for model_name in GEMINI_MODELS:
+        prompt = (f"You are an expert teacher for {data.board} {data.student_class}. "
+                  f"Create exactly 5 multiple-choice questions on these weak topics: {topics_txt}. "
+                  f"Each question must have 4 options and exactly one correct answer. "
+                  f"Respond ONLY with a valid JSON array, no extra text: "
+                  f'[{{"subject":"Math","q":"question text","a":["opt1","opt2","opt3","opt4"],"c":0}}]')
+        text, model_name = gemini_answer(prompt)
+        if text:
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                prompt = (f"You are an expert teacher for {data.board} {data.student_class}. "
-                          f"Create exactly 5 multiple-choice questions on these weak topics: {topics_txt}. "
-                          f"Each question must have 4 options and exactly one correct answer. "
-                          f"Respond ONLY with a valid JSON array, no extra text: "
-                          f'[{{"subject":"Math","q":"question text","a":["opt1","opt2","opt3","opt4"],"c":0}}]')
-                r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=40)
-                if r.status_code != 200:
-                    print(f"⚠️ Test-gen {model_name} error {r.status_code}")
-                    continue
-                text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 m = re.search(r"\[.*\]", text, re.S)
                 questions = json.loads(m.group(0))
-                if not isinstance(questions, list) or not questions:
-                    raise ValueError("empty")
-                print(f"✅ AI test generated via {model_name} ({len(questions)} questions)")
-                return {"questions": questions, "source": "gemini"}
+                if isinstance(questions, list) and questions:
+                    print(f"✅ AI test generated via {model_name}")
+                    return {"questions": questions, "source": "gemini"}
             except Exception as e:
-                print(f"⚠️ Test-gen {model_name} failed: {e}")
+                print(f"⚠️ Test JSON parse failed: {e}")
     questions = []
     subjects = list({i.get("subject", "Math") for i in data.items}) or ["Math"]
     for s in subjects[:3]:
