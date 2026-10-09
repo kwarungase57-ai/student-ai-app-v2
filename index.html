@@ -18,20 +18,12 @@
         button:hover { background: #2980b9; }
         .dash-nav { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 1.2rem; }
         .dash-nav a { background: #2c3e50; color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 0.8rem; }
-        .weak-tag { background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; }
         .mod-list { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
         .mod-list li { padding: 6px 0; border-bottom: 1px dashed #eee; }
         .mini-btn { width: auto; padding: 0 4px; margin: 0; background: none; border: none; color: inherit; font-size: 0.75rem; cursor: pointer; }
         .row { display: flex; gap: 8px; margin-top: 0.5rem; }
         .row input, .row select { margin-top: 0; }
         .row button { width: auto; margin: 0; padding: 0 14px; }
-        #chat-box { max-height: 300px; overflow-y: auto; padding: 0.5rem; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
-        .chat-msg { padding: 0.6rem 1rem; border-radius: 10px; margin: 0.5rem 0; max-width: 85%; white-space: pre-wrap; font-size: 0.9rem; }
-        .user-msg { background: #3498db; color: white; margin-left: auto; }
-        .ai-msg { background: #ecf0f1; color: #2c3e50; }
-        .src-tag { font-size: 0.7rem; color: #95a5a6; display: block; margin-top: 4px; }
-        .quiz-opt { display: block; font-weight: normal; margin: 4px 0; }
-        .quiz-q { border-bottom: 1px solid #eee; padding: 8px 0; }
         #layer2, #dashboard { display: none; }
         .elig-meter { height: 24px; background: #ecf0f1; border-radius: 12px; overflow: hidden; margin: 10px 0; }
         .elig-fill { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 1s; }
@@ -92,8 +84,8 @@
     <div id="dashboard">
         <div class="dash-nav">
             <a href="#abroad">🌍 Study Abroad</a>
-            <a href="#career">🎓 Careers</a><a href="#weak">🧠 Weak Chapters</a>
-            <a href="#quiz">📝 Tests</a><a href="#ai">🤖 AI Solver</a>
+            <a href="#career">🎓 Careers</a>
+            <a href="#weak">🧠 Weak Chapters</a>
         </div>
 
         <div class="layer">
@@ -118,7 +110,7 @@
                     <label><input type="checkbox" value="UK" checked> 🇬🇧 UK</label>
                     <label><input type="checkbox" value="USA"> 🇺 USA</label>
                     <label><input type="checkbox" value="Canada" checked> 🇨🇦 Canada</label>
-                    <label><input type="checkbox" value="Australia"> 🇦🇺 Australia</label>
+                    <label><input type="checkbox" value="Australia"> 🇦 Australia</label>
                     <label><input type="checkbox" value="Germany"> 🇩🇪 Germany</label>
                 </div>
                 <button onclick="checkAbroad()" style="background:#8e44ad;">🚀 Check My Eligibility</button>
@@ -134,6 +126,7 @@
 
         <div class="layer" id="weak">
             <h2>🧠 Weak Chapters Tracker</h2>
+            <p class="layer-subtitle">Note down tough chapters so you never skip them</p>
             <div class="row">
                 <select id="weak-subject-select" onchange="populateChapters()"></select>
                 <select id="weak-chapter-select"></select>
@@ -141,36 +134,11 @@
             </div>
             <ul class="mod-list" id="weak-list" style="margin-top:0.8rem;"></ul>
         </div>
-
-        <div class="layer" id="quiz">
-            <h2>📝 Practice Tests</h2>
-            <button onclick="startQuiz()">🚀 Quick Quiz</button>
-            <button onclick="startWeakTest()" style="background:#e67e22;">🎯 AI Weak-Chapter Test</button>
-            <div class="row" style="margin-top:0.8rem;">
-                <select id="test-subject-select" onchange="populateTestChapters()"></select>
-                <select id="test-chapter-select"></select>
-                <button onclick="startChapterTest()" style="background:#16a085; margin:0;">📚 Chapter Test</button>
-            </div>
-            <div id="quiz-area"></div>
-            <div id="quiz-result"></div>
-        </div>
-
-        <div class="layer" id="ai">
-            <h2>🤖 AI Doubt Solver</h2>
-            <div id="chat-box">
-                <div class="chat-msg ai-msg">Hi! Ask me anything — studies, chapters, or "which university fits 85%?"</div>
-            </div>
-            <div class="row">
-                <input type="text" id="doubt_input" placeholder="Type or speak..." onkeydown="if(event.key==='Enter') askDoubt()">
-                <button style="background:#e74c3c; width:60px;" onclick="startVoice()">🎤</button>
-            </div>
-            <button onclick="askDoubt()">Ask AI 🤖</button>
-        </div>
     </div>
 
     <script>
-    let lastAvg = 0, quizData = [], streamSubjects = [];
-    let studentContext = { name: "Student", level: "Class 12", stream: "Science", weak_subjects: [] };
+    let lastAvg = 0, streamSubjects = [];
+    let studentContext = { name: "Student", level: "Class 12", stream: "Science" };
 
     const store = {
         get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
@@ -201,7 +169,7 @@
         } catch(e) {}
     }
     function confetti(){
-        const emojis = ['🎉','','⭐','🌟','✨','🏆','🌍'];
+        const emojis = ['🎉','','⭐','','✨','','🌍'];
         for (let i = 0; i < 30; i++) {
             const el = document.createElement('div');
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -235,7 +203,6 @@
         "History": { default: ["Bricks Beads and Bones","Kinship and Caste","Bhakti and Sufi Movements","Colonialism","Nationalism"] },
         "Political Science": { default: ["Constitution","Rights","Federalism","Democracy","International Relations"] },
         "Geography": { default: ["Physical Geography","Climate","Population","Agriculture","Minerals","Transport"] },
-        "Science": { default: ["Physics Concepts","Chemistry Concepts","Biology Concepts"] },
         "Hindi": { default: ["व्याकरण","अपठित गद्यांश","लेखन","साहित्य"] }
     };
 
@@ -251,13 +218,6 @@
             ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
             : '<option value="">No chapter list</option>';
     }
-    function populateTestChapters(){
-        const subj = document.getElementById('test-subject-select').value;
-        const list = chaptersFor(subj);
-        document.getElementById('test-chapter-select').innerHTML = list.length
-            ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
-            : '<option value="">No chapters</option>';
-    }
 
     function getSubjects(stream) {
         if (stream === "Science")  return ["Math","Physics","Chemistry","English","Computer Science"];
@@ -265,38 +225,11 @@
         return ["History","Political Science","Geography","English","Hindi"];
     }
 
-    const QUIZ = {
-        Math: [
-            {q:"15% of 200 = ?", a:["20","30","40","25"], c:1},
-            {q:"12 × 8 + 4 = ?", a:["96","100","104","98"], c:1},
-            {q:"Square root of 144 = ?", a:["10","11","12","14"], c:2},
-        ],
-        Science: [
-            {q:"Gas absorbed by plants?", a:["Oxygen","Nitrogen","CO2","Hydrogen"], c:2},
-            {q:"Unit of force?", a:["Joule","Newton","Watt","Pascal"], c:1},
-            {q:"Powerhouse of the cell?", a:["Nucleus","Mitochondria","Ribosome","Chloroplast"], c:1},
-        ],
-        English: [
-            {q:"Synonym of 'Happy'?", a:["Sad","Joyful","Angry","Tired"], c:1},
-            {q:"Plural of 'Child'?", a:["Childs","Children","Childes","Child"], c:1},
-        ],
-        Social: [
-            {q:"First PM of India?", a:["Nehru","Gandhi","Patel","Rajendra Prasad"], c:0},
-            {q:"Taj Mahal is in?", a:["Delhi","Jaipur","Agra","Lucknow"], c:2},
-        ]
-    };
-    function quizFor(s){
-        if (/math|accountancy|economics/i.test(s)) return QUIZ.Math;
-        if (/science|physics|chemistry|biology|computer/i.test(s)) return QUIZ.Science;
-        if (/english|hindi/i.test(s)) return QUIZ.English;
-        return QUIZ.Social;
-    }
-
     function submitLayer1() {
         const name = document.getElementById('student_name').value.trim() || "Student";
         const level = document.getElementById('level').value;
         const stream = document.getElementById('stream').value;
-        studentContext = { name, level, stream, weak_subjects: [] };
+        studentContext = { name, level, stream };
         streamSubjects = getSubjects(stream);
         document.getElementById('layer2-subtitle').textContent = `${name} • ${level} • ${stream}`;
         document.getElementById('layer2').style.display = 'block';
@@ -327,7 +260,7 @@
             document.getElementById('career-list').innerHTML = (data.careers || []).map(c => `
                 <div style="border:1px solid #d4e6f1; border-radius:8px; padding:10px; margin-top:10px; background:#f8fbff;">
                     <strong>${escapeHtml(c.track)}</strong>
-                    <span class="weak-tag" style="background:#27ae60;">${c.match}% match</span>
+                    <span style="background:#27ae60; color:white; padding:2px 8px; border-radius:4px; font-size:0.75rem; margin-left:6px;">${c.match}% match</span>
                     <ul style="margin:6px 0 0 0; padding-left:1.2rem; font-size:0.85rem; color:#555;">
                         ${c.roles.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
                     </ul>
@@ -345,8 +278,7 @@
     function buildSubjectSelects(){
         const opts = streamSubjects.map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
-        document.getElementById('test-subject-select').innerHTML = opts;
-        populateChapters(); populateTestChapters();
+        populateChapters();
     }
     function renderWeak(){
         const topics = store.get(studentContext.name + '_weaktopics', []);
@@ -418,80 +350,6 @@
             <h3 style="margin-top:1.5rem;">📋 Next Steps</h3>
             <ol style="font-size:0.9rem; color:#555;">${data.next_steps.map(s => `<li style="padding:6px 0;">${s}</li>`).join('')}</ol>
         `;
-    }
-
-    function startQuiz(){
-        quizData = [];
-        streamSubjects.slice(0,3).forEach(s => quizFor(s).forEach(q => quizData.push({...q, subject: s})));
-        document.getElementById('quiz-result').innerHTML = '';
-        renderQuiz("🚀 Quick Quiz");
-    }
-    async function startWeakTest(){
-        const topics = store.get(studentContext.name + '_weaktopics', []);
-        let items = topics.map(t => ({subject: t.subject, topic: t.topic}));
-        if (!items.length) { alert("Add weak chapters first!"); return; }
-        await runTest(items, null);
-    }
-    async function startChapterTest(){
-        const subj = document.getElementById('test-subject-select').value;
-        const chapter = document.getElementById('test-chapter-select').value;
-        if (!subj || !chapter || chapter === 'No chapters') { alert('Pick a chapter!'); return; }
-        await runTest([{subject: subj, topic: chapter}], chapter);
-    }
-    async function runTest(items, chapterTitle){
-        document.getElementById('quiz-area').innerHTML = '<p>🤖 Generating test... wait ~10 seconds.</p>';
-        try {
-            const response = await fetch('/generate_test', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_class: studentContext.level, items })
-            });
-            const data = await response.json();
-            if (!data.questions) throw new Error('no questions');
-            quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4);
-            if (!quizData.length) throw new Error('invalid');
-            renderQuiz(chapterTitle ? `📚 ${escapeHtml(chapterTitle)}` : '🎯 AI Test');
-        } catch (err) { document.getElementById('quiz-area').innerHTML = '<p>❌ Could not generate. Try Quick Quiz!</p>'; }
-    }
-    function renderQuiz(title){
-        document.getElementById('quiz-area').innerHTML = `<h3>${title}</h3>` + quizData.map((q,i) => `
-            <div class="quiz-q"><p><strong>Q${i+1}.</strong> ${escapeHtml(q.q)} <em>(${escapeHtml(q.subject || '')})</em></p>
-            ${q.a.map((opt,oi) => `<label class="quiz-opt"><input type="radio" name="q${i}" value="${oi}"> ${escapeHtml(opt)}</label>`).join('')}</div>`).join('') +
-            `<button onclick="submitQuiz()">Submit ✅</button>`;
-    }
-    function submitQuiz(){
-        let correct = 0;
-        quizData.forEach((q,i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); if (sel && parseInt(sel.value) === q.c) correct++; });
-        const pct = Math.round(correct / quizData.length * 100);
-        if (pct >= 80) { confetti(); playSound('success'); } else playSound('correct');
-        document.getElementById('quiz-result').innerHTML = `<h3>Score: ${pct}% (${correct}/${quizData.length})</h3>`;
-    }
-
-    function startVoice(){
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) { alert("Voice not supported"); return; }
-        const rec = new SR(); rec.lang = 'en-IN';
-        rec.onresult = e => { document.getElementById('doubt_input').value = e.results[0][0].transcript; };
-        rec.start();
-    }
-    async function askDoubt(){
-        const input = document.getElementById('doubt_input');
-        const q = input.value.trim(); if (!q) return;
-        const box = document.getElementById('chat-box');
-        box.innerHTML += `<div class="chat-msg user-msg">${escapeHtml(q)}</div><div class="chat-msg ai-msg" id="thinking">🤔 Thinking...</div>`;
-        input.value = ''; box.scrollTop = box.scrollHeight;
-        const rm = () => { const t = document.getElementById('thinking'); if (t) t.remove(); };
-        try {
-            const response = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, student_class: studentContext.level, stream: studentContext.stream, weak_subjects: studentContext.weak_subjects }) });
-            const text = await response.text();
-            let data = null; try { data = JSON.parse(text); } catch(e) {}
-            rm();
-            if (data && data.answer) {
-                const src = data.source === 'gemini' ? '✨ AI' : '📘 Offline';
-                box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
-                playSound('correct');
-            } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — try again!</div>`;
-        } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">❌ Network error!</div>`; }
-        box.scrollTop = box.scrollHeight;
     }
     </script>
 </body>
