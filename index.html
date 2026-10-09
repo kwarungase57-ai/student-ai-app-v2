@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Student Performance</title>
+    <title>AI Study Abroad Platform</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3498db">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
+        body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
         .layer { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.2rem; }
         h1, h2 { color: #2c3e50; text-align: center; }
         h2 { font-size: 1.2rem; }
@@ -41,6 +41,28 @@
         .quiz-opt { display: block; font-weight: normal; margin: 4px 0; }
         .quiz-q { border-bottom: 1px solid #eee; padding: 8px 0; }
         #layer2, #dashboard { display: none; }
+        /* Eligibility meter */
+        .elig-meter { height: 24px; background: #ecf0f1; border-radius: 12px; overflow: hidden; position: relative; margin: 10px 0; }
+        .elig-fill { height: 100%; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60); transition: width 1s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        /* University cards */
+        .uni-card { border: 1px solid #e0e0e0; border-left: 4px solid; border-radius: 8px; padding: 12px; margin: 8px 0; background: #fff; }
+        .uni-card.dream { border-left-color: #9b59b6; }
+        .uni-card.match { border-left-color: #3498db; }
+        .uni-card.safety { border-left-color: #27ae60; }
+        .uni-card h4 { margin: 0 0 6px 0; font-size: 0.95rem; color: #2c3e50; }
+        .uni-meta { font-size: 0.75rem; color: #7f8c8d; }
+        .tier-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; color: white; margin-left: 6px; }
+        .tier-badge.dream { background: #9b59b6; }
+        .tier-badge.match { background: #3498db; }
+        .tier-badge.safety { background: #27ae60; }
+        .scholarship-card { background: #fff9e6; border: 1px solid #f1c40f; border-radius: 8px; padding: 10px; margin: 6px 0; }
+        .country-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+        .country-toggle label { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #ecf0f1; border-radius: 20px; cursor: pointer; font-weight: normal; font-size: 0.85rem; margin: 0; }
+        .country-toggle input { width: auto; margin: 0; }
+        .country-toggle label:has(input:checked) { background: #3498db; color: white; }
+        .hero-gradient { background: linear-gradient(135deg, #3498db, #9b59b6); color: white; padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; }
+        .hero-gradient h1 { color: white; margin: 0; }
+        .hero-gradient p { margin: 0.5rem 0 0 0; opacity: 0.9; }
         @media print {
             body { background: white; }
             .layer:not(.printable), .no-print, .dash-nav { display: none !important; }
@@ -49,9 +71,12 @@
     </style>
 </head>
 <body>
-    <h1>🏠 AI Student Performance</h1>
+    <div class="hero-gradient">
+        <h1>🌍 AI Study Abroad Platform</h1>
+        <p>From your marks to your dream university — powered by AI</p>
+    </div>
     <button id="sound-toggle" class="no-print" onclick="toggleSound()" title="Sound on/off"
-        style="position:fixed; top:12px; right:12px; width:48px; height:48px; padding:0; margin:0; background:#2c3e50; border-radius:50%; z-index:999;">🔊</button>
+        style="position:fixed; top:12px; right:12px; width:48px; height:48px; padding:0; margin:0; background:#2c3e50; color:white; border-radius:50%; z-index:999;">🔊</button>
 
     <div class="layer">
         <h2>👤 Student Profile</h2>
@@ -81,41 +106,70 @@
     </div>
 
     <div class="layer" id="layer2">
-        <h2>📊 Enter Lecture Scores</h2>
+        <h2>📊 Enter Marks & Preferences</h2>
         <p class="layer-subtitle" id="layer2-subtitle"></p>
         <label>Available Study Hours Per Week</label>
         <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
         <label>⏰ Daily Study Start Time</label>
         <input type="time" id="start_time" value="16:00">
         <div id="subject_inputs"></div>
-        <button onclick="analyze()">Analyze → Open Dashboard</button>
+        <button onclick="analyze()">Analyze Profile & Check Abroad Eligibility →</button>
     </div>
 
     <div id="dashboard">
         <div class="dash-nav no-print">
-            <a href="#plan">🎯 Today's Plan</a><a href="#weak">🧠 Weak Topics</a>
-            <a href="#career">🎓 Careers</a><a href="#quiz">📝 Practice Test</a><a href="#mistakes">📕 Mistake Notebook</a>
-            <a href="#revision">🔄 Revision</a><a href="#ai">🤖 AI Solver</a><a href="#history">📈 Progress</a>
+            <a href="#abroad">🌍 Study Abroad</a>
+            <a href="#plan">🎯 Plan</a><a href="#weak">🧠 Weak</a>
+            <a href="#career">🎓 Careers</a><a href="#quiz">📝 Tests</a>
+            <a href="#ai">🤖 AI Solver</a>
         </div>
 
         <div class="layer printable">
             <h2>📊 Performance Dashboard</h2>
             <div id="result"></div>
             <canvas id="radarChart" style="margin-top:1rem;"></canvas>
-            <button class="no-print" onclick="window.print()" style="background:#27ae60;">🖨️ Download PDF Report</button>
+        </div>
+
+        <!-- 🌍 STUDY ABROAD ELIGIBILITY (HERO SECTION) -->
+        <div class="layer printable" id="abroad">
+            <h2>🌍 Your Study Abroad Eligibility</h2>
+            <p class="layer-subtitle">Real universities matched to your marks + IELTS + budget</p>
+
+            <div class="no-print">
+                <label>🎯 Expected IELTS Band</label>
+                <input type="number" id="ielts_band" value="6.5" min="4" max="9" step="0.5">
+
+                <label>💰 Budget Level</label>
+                <select id="budget">
+                    <option value="low">Low (Germany / scholarships)</option>
+                    <option value="medium" selected>Medium (most universities)</option>
+                    <option value="high">High (top-tier / USA / UK)</option>
+                </select>
+
+                <label>🌍 Target Countries (pick multiple)</label>
+                <div class="country-toggle">
+                    <label><input type="checkbox" value="UK" checked> 🇬🇧 UK</label>
+                    <label><input type="checkbox" value="USA"> 🇺🇸 USA</label>
+                    <label><input type="checkbox" value="Canada" checked> 🇨🇦 Canada</label>
+                    <label><input type="checkbox" value="Australia"> 🇦🇺 Australia</label>
+                    <label><input type="checkbox" value="Germany"> 🇩🇪 Germany</label>
+                </div>
+
+                <button onclick="checkAbroad()" style="background:#8e44ad;">🚀 Check My Eligibility</button>
+            </div>
+
+            <div id="abroad-result"></div>
         </div>
 
         <div class="layer printable" id="plan">
             <h2>🎯 Today's Study Plan</h2>
             <p class="layer-subtitle" id="today-label"></p>
             <ul class="mod-list" id="today-list"></ul>
-            <button class="no-print" onclick="toggleWeek()" style="background:#7f8c8d;">📅 View / Hide Full Week</button>
         </div>
         <div class="layer printable" id="timetable-section" style="display:none;">
             <div class="timetable-grid" id="timetable-grid"></div>
         </div>
 
-        <!-- 🎓 CAREER GUIDANCE -->
         <div class="layer printable" id="career">
             <h2>🎓 Career Guidance</h2>
             <p class="layer-subtitle">Top career paths matched to your strongest subjects</p>
@@ -130,15 +184,13 @@
                 <select id="weak-chapter-select"></select>
                 <button onclick="addWeak()">+ Add</button>
             </div>
-            <input type="text" id="weak-topic-input" placeholder="Or type a custom topic (optional)..." class="no-print" style="margin-top:6px;">
             <ul class="mod-list" id="weak-list" style="margin-top:0.8rem;"></ul>
         </div>
 
         <div class="layer" id="quiz">
-            <h2>📝 Practice Test</h2>
-            <p class="layer-subtitle">Quick quiz • AI weak-chapter test • ANY chapter test</p>
-            <button class="no-print" onclick="startQuiz()">🚀 Start Practice Test</button>
-            <button class="no-print" onclick="startWeakTest()" style="background:#e67e22;">🎯 Test My Weak Chapters (AI)</button>
+            <h2>📝 Practice Tests</h2>
+            <button class="no-print" onclick="startQuiz()">🚀 Quick Quiz</button>
+            <button class="no-print" onclick="startWeakTest()" style="background:#e67e22;">🎯 AI Weak-Chapter Test</button>
             <div class="row no-print" style="margin-top:0.8rem;">
                 <select id="test-subject-select" onchange="populateTestChapters()"></select>
                 <select id="test-chapter-select"></select>
@@ -148,62 +200,23 @@
             <div id="quiz-result"></div>
         </div>
 
-        <div class="layer" id="mistakes">
-            <h2>📕 Mistake Notebook</h2>
-            <p class="layer-subtitle">Wrong test answers are saved here automatically!</p>
-            <div class="row no-print">
-                <select id="mistake-subject-select"></select>
-                <input type="text" id="mistake-input" placeholder="e.g., Forgot to change sign">
-                <button onclick="addMistake()">+ Add</button>
-            </div>
-            <ul class="mod-list" id="mistake-list" style="margin-top:0.8rem;"></ul>
-        </div>
-
-        <div class="layer" id="revision">
-            <h2>🔄 Revision Tracker</h2>
-            <p class="layer-subtitle">🔴 = revise today • 🟢 = recently revised</p>
-            <ul class="mod-list" id="revision-list"></ul>
-        </div>
-
         <div class="layer" id="ai">
             <h2>🤖 AI Doubt Solver</h2>
             <div id="chat-box">
-                <div class="chat-msg ai-msg">Hi! I'm your personal AI tutor 🤖 Ask me anything — even "give me notes of chapter X"!</div>
+                <div class="chat-msg ai-msg">Hi! Ask me anything — even "Which university should I apply to with 85%?"</div>
             </div>
             <div class="row">
-                <input type="text" id="doubt_input" placeholder="Type or speak your doubt..." onkeydown="if(event.key==='Enter') askDoubt()">
+                <input type="text" id="doubt_input" placeholder="Type or speak..." onkeydown="if(event.key==='Enter') askDoubt()">
                 <button class="no-print" style="background:#e74c3c; width:60px;" onclick="startVoice()">🎤</button>
             </div>
             <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
-        </div>
-
-        <div class="layer" id="history">
-            <h2>📈 Progress History</h2>
-            <canvas id="progressChart"></canvas>
-        </div>
-    </div>
-
-    <!-- 👨‍ TEACHER VIEW -->
-    <div class="layer" id="teacher">
-        <h2>👨 Teacher View: Class Test Data</h2>
-        <p class="layer-subtitle">Every analysis saved on the server — view & export</p>
-        <button class="no-print" onclick="loadRecords()" style="background:#8e44ad;">📊 Load Test Data</button>
-        <button class="no-print" onclick="downloadCSV()" style="background:#27ae60;">⬇️ Download CSV (Excel)</button>
-        <div style="overflow-x:auto; margin-top:1rem;">
-            <table id="records-table" style="width:100%; border-collapse:collapse; font-size:0.75rem; display:none;">
-                <thead><tr style="background:#2c3e50; color:white;">
-                    <th style="padding:6px;">Date</th><th style="padding:6px;">Name</th><th style="padding:6px;">Class</th>
-                    <th style="padding:6px;">Board</th><th style="padding:6px;">Avg</th><th style="padding:6px;">Level</th><th style="padding:6px;">Subject Scores</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
         </div>
     </div>
 
     <script>
     let myChart = null, myRadar = null;
     let currentTimetable = null, aiTimetable = null;
-    let lastScores = {}, lastWeak = [], revSubjects = [], quizData = [];
+    let lastScores = {}, lastAvg = 0, lastWeak = [], quizData = [];
     let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
 
     const store = {
@@ -212,7 +225,6 @@
     };
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    // ---------- 🔊 SOUNDS & CONFETTI ----------
     let soundOn = localStorage.getItem('soundOn') !== '0';
     let audioCtx = null;
     function updateSoundIcon(){ const b = document.getElementById('sound-toggle'); if (b) b.textContent = soundOn ? '🔊' : '🔇'; }
@@ -230,14 +242,14 @@
                 o.connect(g); g.connect(ctx.destination);
                 o.start(now + start); o.stop(now + start + dur);
             };
-            if (type === 'click')   beep(650, 0, 0.06, 'square', 0.06);
+            if (type === 'click') beep(650, 0, 0.06, 'square', 0.06);
             if (type === 'correct') { beep(880, 0, 0.1); beep(1175, 0.12, 0.2); }
-            if (type === 'wrong')   { beep(220, 0, 0.2, 'sawtooth', 0.12); beep(160, 0.22, 0.3, 'sawtooth', 0.12); }
+            if (type === 'wrong') { beep(220, 0, 0.2, 'sawtooth', 0.12); }
             if (type === 'success') { beep(523,0,0.15); beep(659,0.16,0.15); beep(784,0.32,0.2); beep(1047,0.5,0.4); }
         } catch(e) {}
     }
     function confetti(){
-        const emojis = ['🎉','','⭐','🌟','✨','🏆',''];
+        const emojis = ['🎉','🎓','⭐','🌟','✨','🏆','🌍'];
         for (let i = 0; i < 30; i++) {
             const el = document.createElement('div');
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -254,56 +266,27 @@
 
     const CHAPTERS = {
         "Math": {
-            6: ["Knowing Our Numbers","Whole Numbers","Playing with Numbers","Basic Geometrical Ideas","Fractions","Decimals","Data Handling","Mensuration","Algebra","Ratio and Proportion","Symmetry"],
-            7: ["Integers","Fractions and Decimals","Data Handling","Simple Equations","Lines and Angles","Triangles","Congruence of Triangles","Comparing Quantities","Rational Numbers","Perimeter and Area","Algebraic Expressions","Exponents and Powers","Symmetry","Visualising Solid Shapes"],
-            8: ["Rational Numbers","Linear Equations in One Variable","Understanding Quadrilaterals","Data Handling","Squares and Square Roots","Cubes and Cube Roots","Comparing Quantities","Algebraic Expressions and Identities","Mensuration","Exponents and Powers","Direct and Inverse Proportions","Factorisation","Introduction to Graphs","Playing with Numbers"],
-            9: ["Number Systems","Polynomials","Coordinate Geometry","Linear Equations in Two Variables","Euclid's Geometry","Lines and Angles","Triangles","Quadrilaterals","Areas of Parallelograms and Triangles","Circles","Constructions","Heron's Formula","Surface Areas and Volumes","Statistics","Probability"],
-            10: ["Real Numbers","Polynomials","Pair of Linear Equations in Two Variables","Quadratic Equations","Arithmetic Progressions","Triangles","Coordinate Geometry","Introduction to Trigonometry","Some Applications of Trigonometry","Circles","Areas Related to Circles","Surface Areas and Volumes","Statistics","Probability"],
-            default: ["Algebra","Geometry","Trigonometry","Calculus","Probability","Statistics"]
-        },
-        "Science": {
-            6: ["Food and Its Components","Sorting Materials into Groups","Separation of Substances","Getting to Know Plants","Body Movements in Animals","The Living Organisms and Their Surroundings","Motion and Measurement","Light, Shadows and Reflections","Electricity and Circuits","Air Around Us","Water"],
-            7: ["Nutrition in Plants","Nutrition in Animals","Heat","Acids, Bases and Salts","Physical and Chemical Changes","Respiration in Organisms","Transportation in Plants and Animals","Reproduction in Plants","Motion and Time","Electric Current and Its Effects","Winds, Storms and Cyclones","Soil"],
-            8: ["Crop Production and Management","Microorganisms: Friend and Foe","Coal and Petroleum","Combustion and Flame","Conservation of Plants and Animals","Force and Pressure","Friction","Sound","Chemical Effects of Electric Current","Some Natural Phenomena","Light","Stars and the Solar System","Pollution of Air and Water"],
-            9: ["Matter in Our Surroundings","Is Matter Around Us Pure?","Atoms and Molecules","Structure of the Atom","The Fundamental Unit of Life","Tissues","Diversity in Living Organisms","Motion","Force and Laws of Motion","Gravitation","Work and Energy","Sound","Why Do We Fall Ill?","Natural Resources","Improvement in Food Resources"],
-            10: ["Chemical Reactions and Equations","Acids, Bases and Salts","Metals and Non-metals","Carbon and Its Compounds","Periodic Classification of Elements","Life Processes","Control and Coordination","How Do Organisms Reproduce?","Heredity and Evolution","Light – Reflection and Refraction","The Human Eye and the Colourful World","Electricity","Magnetic Effects of Electric Current","Sources of Energy","Our Environment","Sustainable Management of Natural Resources"],
-            default: ["Physics Concepts","Chemistry Concepts","Biology Concepts"]
+            10: ["Real Numbers","Polynomials","Linear Equations","Quadratic Equations","Arithmetic Progressions","Triangles","Coordinate Geometry","Trigonometry","Circles","Statistics","Probability"],
+            11: ["Sets","Relations","Trigonometric Functions","Complex Numbers","Linear Inequalities","Permutations","Binomial Theorem","Sequences","Straight Lines","Conic Sections","Limits","Statistics"],
+            12: ["Relations & Functions","Inverse Trig","Matrices","Determinants","Continuity","Application of Derivatives","Integrals","Differential Equations","Vectors","3D Geometry","Linear Programming","Probability"],
+            default: ["Algebra","Geometry","Trigonometry","Calculus","Probability"]
         },
         "Physics": {
-            11: ["Units and Measurement","Motion in a Straight Line","Motion in a Plane","Laws of Motion","Work, Energy and Power","System of Particles and Rotational Motion","Gravitation","Thermodynamics","Oscillations","Waves"],
-            12: ["Electric Charges and Fields","Electrostatic Potential and Capacitance","Current Electricity","Moving Charges and Magnetism","Electromagnetic Induction","Alternating Current","Ray Optics and Optical Instruments","Wave Optics","Dual Nature of Radiation and Matter","Atoms","Nuclei","Semiconductor Electronics"],
+            11: ["Units & Measurement","Motion","Laws of Motion","Work & Energy","Gravitation","Thermodynamics","Oscillations","Waves"],
+            12: ["Electric Charges","Electrostatic Potential","Current Electricity","Magnetism","Electromagnetic Induction","AC Circuits","EM Waves","Optics","Dual Nature","Atoms","Nuclei","Semiconductors"],
             default: ["Mechanics","Electrodynamics","Optics","Modern Physics"]
         },
         "Chemistry": {
-            11: ["Some Basic Concepts of Chemistry","Structure of Atom","Classification of Elements and Periodicity","Chemical Bonding and Molecular Structure","States of Matter","Thermodynamics","Equilibrium","Redox Reactions","Organic Chemistry – Basic Principles","Hydrocarbons"],
-            12: ["Solutions","Electrochemistry","Chemical Kinetics","Coordination Compounds","Haloalkanes and Haloarenes","Alcohols, Phenols and Ethers","Aldehydes, Ketones and Carboxylic Acids","Amines","Biomolecules","Polymers"],
+            11: ["Basic Concepts","Atomic Structure","Periodicity","Chemical Bonding","States of Matter","Thermodynamics","Equilibrium","Redox","Organic Basics","Hydrocarbons"],
+            12: ["Solid State","Solutions","Electrochemistry","Chemical Kinetics","Coordination Compounds","Haloalkanes","Alcohols","Aldehydes","Amines","Biomolecules"],
             default: ["Physical Chemistry","Organic Chemistry","Inorganic Chemistry"]
         },
-        "English": { default: ["Reading Comprehension","Writing Skills (Letter/Essay)","Grammar: Tenses","Grammar: Articles and Prepositions","Grammar: Active-Passive Voice","Poetry and Literature","Vocabulary and Synonyms"] },
-        "Hindi": { default: ["व्याकरण (Grammar)","अपठित गद्यांश (Comprehension)","लेखन (Essay/Letter)","साहित्य (Literature)","रस और अलंकार"] },
-        "Marathi": { default: ["व्याकरण","बोधप्रश्न (Comprehension)","लेखन","साहित्य"] },
-        "Social Studies": {
-            6: ["Understanding Diversity","What, Where, How and When?","Globe: Models and Maps","In the Earliest Days","Ashoka and the Mauryan Empire","Rural and Urban Livelihoods","The Earth in the Solar System"],
-            7: ["Tracing Changes Through a Thousand Years","New Kings and Kingdoms","The Mughal Empire","Devotional Paths to the Divine","The Making of Regional Cultures","Environment","Air","Water","Our Changing Earth"],
-            8: ["How, When and Where?","Resources","Land, Soil and Water","Minerals and Power Resources","The Indian Constitution","Understanding Secularism","Why Do We Need a Parliament?","The Freedom Struggle"],
-            9: ["The French Revolution","Socialism in Europe and the Russian Revolution","Nazism and the Rise of Hitler","Forest Society and Colonialism","Pastoralists in the Modern World","India – Size and Location","Physical Features of India","Climate","Democracy"],
-            10: ["The Rise of Nationalism in Europe","Nationalism in India","The Making of a Global World","The Age of Industrialisation","Print Culture and the Modern World","Resources and Development","Sectors of the Indian Economy","Money and Credit","Federalism","Political Parties"],
-            default: ["History","Geography","Civics","Economics"]
-        },
-        "Accountancy": { default: ["Introduction to Accounting","Journal and Ledger","Trial Balance","Bank Reconciliation Statement","Depreciation","Final Accounts","Bills of Exchange","Partnership Accounts","Company Accounts","Share Capital","Debentures","Financial Statements Analysis"] },
-        "Business Studies": { default: ["Nature and Significance of Management","Principles of Management","Business Environment","Planning","Organising","Staffing","Directing","Controlling","Marketing Management","Financial Management"] },
-        "Economics": { default: ["Introduction to Microeconomics","Consumer Equilibrium","Demand and Elasticity","Cost and Revenue","Production","Market Forms","National Income","Money and Banking","Government Budget","Balance of Payments","Development Experience"] },
-        "History": { default: ["Bricks, Beads and Bones","Kings, Farmers and Towns","Kinship, Caste and Class","Thinkers, Beliefs and Buildings","Bhakti-Sufi Traditions","Colonialism and the Countryside","Rebels and the Raj","Nationalism and the Freedom Movement"] },
-        "Political Science": { default: ["The Constitution: Why and How?","Rights in the Indian Constitution","Federalism","Democracy and Diversity","Challenges to Democracy","International Relations","Cold War Era"] },
-        "Geography": { default: ["Physical Geography","Landforms and Their Evolution","Climate","Vegetation and Soils","Population Composition","Human Settlements","Agriculture","Minerals and Energy Resources","Transport and Communication"] },
-        "Computer Science": { default: ["Computer Basics","Number Systems","Programming Logic","Python Basics","Data Types and Variables","Loops and Functions","Lists and Dictionaries","Internet and Cyber Safety"] },
-        "Computer Applications": { default: ["Computer Basics","MS Office (Word/Excel)","Internet Basics","Cyber Safety"] }
+        "default": { default: ["Chapter 1","Chapter 2","Chapter 3"] }
     };
 
     function chaptersFor(subject, cls){
         const c = parseInt(cls.replace("Class ", ""));
-        const m = CHAPTERS[subject];
-        if (!m) return [];
+        const m = CHAPTERS[subject] || CHAPTERS["default"];
         return m[c] || m.default || [];
     }
 
@@ -314,7 +297,6 @@
             ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
             : '<option value="">No chapter list</option>';
     }
-
     function populateTestChapters(){
         const subj = document.getElementById('test-subject-select').value;
         const list = chaptersFor(subj, studentContext.student_class);
@@ -326,51 +308,36 @@
     const QUIZ = {
         Math: [
             {q:"15% of 200 = ?", a:["20","30","40","25"], c:1},
-            {q:"12 × 8 + 4 = ?", a:["96","100","104","98"], c:1},
             {q:"Square root of 144 = ?", a:["10","11","12","14"], c:2},
-            {q:"If x + 5 = 12, then x = ?", a:["6","7","8","9"], c:1},
-            {q:"Area of a triangle = ?", a:["b×h","½×b×h","b+h","2bh"], c:1}
+            {q:"If x + 5 = 12, x = ?", a:["6","7","8","9"], c:1},
         ],
         Science: [
             {q:"Gas absorbed by plants?", a:["Oxygen","Nitrogen","CO2","Hydrogen"], c:2},
             {q:"Unit of force?", a:["Joule","Newton","Watt","Pascal"], c:1},
-            {q:"Water boils at?", a:["90°C","100°C","80°C","120°C"], c:1},
             {q:"Powerhouse of the cell?", a:["Nucleus","Mitochondria","Ribosome","Chloroplast"], c:1},
-            {q:"Speed of light (approx)?", a:["3×10⁸ m/s","3×10⁶ m/s","3×10⁵ m/s","3×10⁷ m/s"], c:0}
         ],
         English: [
             {q:"Synonym of 'Happy'?", a:["Sad","Joyful","Angry","Tired"], c:1},
-            {q:"Antonym of 'Begin'?", a:["Start","End","Open","Run"], c:1},
             {q:"Plural of 'Child'?", a:["Childs","Children","Childes","Child"], c:1},
-            {q:"Past tense of 'Go'?", a:["Goed","Went","Gone","Going"], c:1},
-            {q:"Article before 'apple'?", a:["A","An","The","None"], c:1}
         ],
         Social: [
             {q:"First PM of India?", a:["Nehru","Gandhi","Patel","Rajendra Prasad"], c:0},
-            {q:"Longest river in India?", a:["Yamuna","Ganga","Godavari","Brahmaputra"], c:1},
-            {q:"Constitution adopted in?", a:["1947","1950","1952","1949"], c:1},
             {q:"Taj Mahal is in?", a:["Delhi","Jaipur","Agra","Lucknow"], c:2},
-            {q:"India's national animal?", a:["Lion","Tiger","Elephant","Leopard"], c:1}
         ]
     };
     function quizFor(s){
         if (/math/i.test(s)) return QUIZ.Math;
-        if (/science|physics|chemistry|biology/i.test(s)) return QUIZ.Science;
-        if (/english|hindi|marathi/i.test(s)) return QUIZ.English;
+        if (/science|physics|chemistry/i.test(s)) return QUIZ.Science;
+        if (/english|hindi/i.test(s)) return QUIZ.English;
         return QUIZ.Social;
     }
 
     function getSubjects(board, cls, stream) {
         const c = parseInt(cls.replace("Class ", ""));
-        if (c <= 10) {
-            if (board === "ICSE") return ["Math","Science","English","Hindi","Social Studies","Computer Applications"];
-            if (board === "SSC")  return ["Math","Science","English","Marathi","Social Studies"];
-            return ["Math","Science","English","Hindi","Social Studies"];
-        } else {
-            if (stream === "Science")  return ["Math","Physics","Chemistry","English","Computer Science"];
-            if (stream === "Commerce") return ["Accountancy","Business Studies","Economics","English","Math"];
-            return ["History","Political Science","Geography","English","Hindi"];
-        }
+        if (c <= 10) return ["Math","Science","English","Hindi","Social Studies"];
+        if (stream === "Science") return ["Math","Physics","Chemistry","English","Computer Science"];
+        if (stream === "Commerce") return ["Accountancy","Business Studies","Economics","English","Math"];
+        return ["History","Political Science","Geography","English","Hindi"];
     }
 
     function toggleStream() {
@@ -391,7 +358,6 @@
         const stream = (c >= 11) ? document.getElementById('stream').value : "None";
         if (!board || !cls || (c >= 11 && !stream)) { alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + "!"); return; }
         studentContext = { name, board, student_class: cls, stream, weak_subjects: [] };
-
         const subjects = getSubjects(board, cls, stream);
         document.getElementById('layer2-subtitle').textContent = `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
         document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
@@ -423,10 +389,10 @@
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
             studentContext.weak_subjects = data.weak_subjects;
-            lastScores = subjectScores; lastWeak = data.weak_subjects;
+            lastScores = subjectScores; lastWeak = data.weak_subjects; lastAvg = data.average_score;
 
             document.getElementById('result').innerHTML = `
-                <p style="text-align:center; font-size:0.8rem; color:#7f8c8d;">📄 ${studentContext.name} • ${studentContext.board} • ${studentContext.student_class} • ${new Date().toLocaleDateString()}</p>
+                <p style="text-align:center; font-size:0.8rem; color:#7f8c8d;">📄 ${studentContext.name} • ${studentContext.board} • ${studentContext.student_class}</p>
                 <h3 style="text-align:center;">🎯 ${data.performance_level}</h3>
                 <p style="text-align:center;"><strong>Avg:</strong> ${data.average_score}% • <strong>Confidence:</strong> ${data.confidence}%</p>
                 <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>`;
@@ -435,7 +401,6 @@
             if (myRadar) myRadar.destroy();
             myRadar = new Chart(rctx, { type: 'radar', data: { labels: Object.keys(subjectScores), datasets: [{ label: studentContext.name, data: Object.values(subjectScores), backgroundColor: 'rgba(52,152,219,0.2)', borderColor: '#3498db' }] }, options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
 
-            // 🎓 CAREER GUIDANCE
             document.getElementById('career-list').innerHTML = (data.careers || []).map(c => `
                 <div style="border:1px solid #d4e6f1; border-radius:8px; padding:10px; margin-top:10px; background:#f8fbff;">
                     <strong>${escapeHtml(c.track)}</strong>
@@ -443,22 +408,21 @@
                     <ul style="margin:6px 0 0 0; padding-left:1.2rem; font-size:0.85rem; color:#555;">
                         ${c.roles.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
                     </ul>
-                </div>`).join('') || '<p>Analyze to see career options.</p>';
+                </div>`).join('') || '<p>Analyze to see careers.</p>';
 
             aiTimetable = data.timetable;
-            currentTimetable = toObj(data.timetable);
+            currentTimetable = data.timetable.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) }));
 
             document.getElementById('dashboard').style.display = 'block';
             if (data.performance_level === 'Excellent') { confetti(); playSound('success'); }
             else playSound('correct');
             buildSubjectSelects();
-            renderTodayPlan(); renderWeak(); renderMistakes(); renderRevision(); renderTimetable();
-            loadChart();
+            renderTodayPlan(); renderWeak(); renderTimetable();
+            // Auto-check abroad eligibility
+            checkAbroad();
             document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
         } catch (err) { alert("Error: " + err.message); }
     }
-
-    function toObj(tt){ return tt.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) })); }
 
     function renderTimetable() {
         document.getElementById('timetable-grid').innerHTML = currentTimetable.map((day, di) => `
@@ -467,171 +431,182 @@
                     <span class="task-text" onclick="toggleTask(${di},${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span>
                     <span class="no-print"><button class="mini-btn" onclick="editTask(${di},${ti})">✏️</button><button class="mini-btn" onclick="deleteTask(${di},${ti})">✕</button></span>
                 </li>`).join('')}
-            </ul><button class="mini-btn no-print" style="color:#27ae60;" onclick="addTask(${di})">+ Add task</button></div>
+            </ul></div>
         `).join('');
     }
-    function toggleTask(di,ti){ currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done; store.set('tt_'+studentContext.name, currentTimetable); renderTimetable(); renderTodayPlan(); }
-    function deleteTask(di,ti){ currentTimetable[di].tasks.splice(ti,1); renderTimetable(); renderTodayPlan(); }
-    function editTask(di,ti){ const v = prompt("✏️ Edit task:", currentTimetable[di].tasks[ti].text); if(v && v.trim()){ currentTimetable[di].tasks[ti].text = v.trim(); renderTimetable(); renderTodayPlan(); } }
-    function addTask(di){ const v = prompt("➕ New task:"); if(v && v.trim()){ currentTimetable[di].tasks.push({text:v.trim(), done:false}); renderTimetable(); renderTodayPlan(); } }
-    function toggleWeek(){ const tt = document.getElementById('timetable-section'); tt.style.display = tt.style.display === 'none' ? 'block' : 'none'; }
+    function toggleTask(di,ti){ currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done; renderTimetable(); renderTodayPlan(); }
+    function editTask(di,ti){ const v = prompt("Edit:", currentTimetable[di].tasks[ti].text); if(v){ currentTimetable[di].tasks[ti].text = v; renderTimetable(); } }
+    function deleteTask(di,ti){ currentTimetable[di].tasks.splice(ti,1); renderTimetable(); }
 
     function todayName(){ return new Date().toLocaleDateString('en-US', { weekday: 'long' }); }
     function renderTodayPlan(){
-        document.getElementById('today-label').textContent = todayName() + " — tap to mark done ✅";
+        document.getElementById('today-label').textContent = todayName();
         const today = (currentTimetable || []).find(d => d.day === todayName());
         document.getElementById('today-list').innerHTML = today ? today.tasks.map((t, ti) => `
-            <li class="${t.done?'done-task':''}"><span class="task-text" onclick="toggleToday(${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span></li>`).join('') : '<li>Generate your plan first.</li>';
+            <li class="${t.done?'done-task':''}"><span class="task-text" onclick="toggleToday(${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span></li>`).join('') : '<li>No plan.</li>';
     }
     function toggleToday(ti){
         const today = currentTimetable.find(d => d.day === todayName());
         today.tasks[ti].done = !today.tasks[ti].done;
-        if (today.tasks[ti].done) playSound('correct');
-        store.set('tt_'+studentContext.name, currentTimetable);
         renderTodayPlan(); renderTimetable();
     }
 
     function buildSubjectSelects(){
         const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
-        document.getElementById('mistake-subject-select').innerHTML = opts;
         document.getElementById('test-subject-select').innerHTML = opts;
-        populateChapters();
-        populateTestChapters();
+        populateChapters(); populateTestChapters();
     }
     function renderWeak(){
-        document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak subjects: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects detected!';
+        document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects!';
         const topics = store.get(studentContext.name + '_weaktopics', []);
-        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>Select a subject above and add your weak chapters 📖</li>';
+        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>Add weak chapters above</li>';
     }
     function addWeak(){
         const subj = document.getElementById('weak-subject-select').value;
-        const custom = document.getElementById('weak-topic-input').value.trim();
         const chapter = document.getElementById('weak-chapter-select').value;
-        const topic = custom || chapter;
-        if (!subj || !topic || topic === "No chapter list") { alert("Pick a chapter or type a topic!"); return; }
+        if (!subj || !chapter || chapter === "No chapter list") { alert("Pick a chapter!"); return; }
         const key = studentContext.name + '_weaktopics';
-        const topics = store.get(key, []); topics.push({subject: subj, topic});
-        store.set(key, topics); document.getElementById('weak-topic-input').value = ''; renderWeak();
+        const topics = store.get(key, []); topics.push({subject: subj, topic: chapter});
+        store.set(key, topics); renderWeak();
     }
     function delWeak(i){ const key = studentContext.name + '_weaktopics'; const t = store.get(key, []); t.splice(i,1); store.set(key,t); renderWeak(); }
 
-    // ---------- PRACTICE TESTS ----------
-    function startQuiz(){
-        const subjects = Object.keys(lastScores);
-        if (!subjects.length) { alert("Analyze your profile first!"); return; }
-        const weakest = [...subjects].sort((a,b) => lastScores[a]-lastScores[b]).slice(0,3);
-        quizData = [];
-        weakest.forEach(s => quizFor(s).slice(0,3).forEach(q => quizData.push({...q, subject: s})));
-        document.getElementById('quiz-result').innerHTML = '';
-        renderQuiz("🚀 Quick Quiz (offline)");
+    // ---------- 🌍 STUDY ABROAD CHECKER ----------
+    async function checkAbroad(){
+        if (!lastAvg) { alert("Please analyze your profile first!"); return; }
+        const ielts = parseFloat(document.getElementById('ielts_band').value) || 6.5;
+        const budget = document.getElementById('budget').value;
+        const countries = Array.from(document.querySelectorAll('.country-toggle input:checked')).map(cb => cb.value);
+        if (!countries.length) { alert("Select at least one country!"); return; }
+
+        document.getElementById('abroad-result').innerHTML = '<p>🔍 Analyzing your profile against global universities...</p>';
+        try {
+            const response = await fetch('/study_abroad', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ student_name: studentContext.name, avg_score: lastAvg, ielts_band: ielts, countries, budget })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail);
+            renderAbroadResult(data);
+            if (data.eligibility_score >= 80) { confetti(); playSound('success'); }
+            else playSound('correct');
+        } catch (err) {
+            document.getElementById('abroad-result').innerHTML = `<p style="color:#e74c3c;">❌ ${err.message}</p>`;
+        }
     }
 
+    function renderAbroadResult(data){
+        const score = data.eligibility_score;
+        let scoreColor = score >= 80 ? '#27ae60' : score >= 60 ? '#f39c12' : '#e74c3c';
+        let scoreLabel = score >= 85 ? 'Excellent — Dream universities open!' : score >= 75 ? 'Good — Strong for Match universities' : score >= 60 ? 'Fair — Safety universities secure' : 'Needs improvement — focus on raising GPA + IELTS';
+
+        const renderUnis = (list, tier) => {
+            if (!list.length) return `<p style="color:#999; font-size:0.85rem;">No ${tier} universities qualified. ${tier === 'Dream' ? 'Raise your GPA to 85+ and IELTS to 7.0+' : ''}</p>`;
+            return list.map(u => `
+                <div class="uni-card ${tier}">
+                    <h4>${u.flag} ${escapeHtml(u.name)} <span class="tier-badge ${tier}">${tier}</span></h4>
+                    <div class="uni-meta">
+                        Min GPA: ${u.min_gpa}% • Min IELTS: ${u.min_ielts} • Cost: ${u.cost} • ${u.country}
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        const renderScholarships = (list) => {
+            if (!list.length) return '<p style="color:#999; font-size:0.85rem;">No scholarships match your profile yet. Target 85% + IELTS 6.5 to unlock top scholarships!</p>';
+            return list.map(s => `
+                <div class="scholarship-card">
+                    <strong>💰 ${escapeHtml(s.name)}</strong> ${s.flag}<br>
+                    <span style="font-size:0.8rem; color:#666;">${escapeHtml(s.value)} • Min GPA: ${s.min_score}% • ${s.country}</span>
+                </div>
+            `).join('');
+        };
+
+        document.getElementById('abroad-result').innerHTML = `
+            <h3 style="text-align:center; margin-top:1rem;">🎯 Your Eligibility Score</h3>
+            <div class="elig-meter">
+                <div class="elig-fill" style="width:${score}%; background:${scoreColor};">${score}%</div>
+            </div>
+            <p style="text-align:center; color:${scoreColor}; font-weight:bold;">${scoreLabel}</p>
+            <p style="text-align:center; font-size:0.85rem; color:#7f8c8d;">
+                🏫 ${data.total_universities} universities matched • 💰 ${data.scholarships.length} scholarships available
+            </p>
+
+            <h3 style="margin-top:1.5rem;">🌟 Dream Universities (Top Tier)</h3>
+            ${renderUnis(data.dream, 'dream')}
+
+            <h3 style="margin-top:1.2rem;">🎯 Match Universities (Great Fit)</h3>
+            ${renderUnis(data.match, 'match')}
+
+            <h3 style="margin-top:1.2rem;">✅ Safety Universities (Secure Options)</h3>
+            ${renderUnis(data.safety, 'safety')}
+
+            <h3 style="margin-top:1.5rem;">💰 Scholarships You Qualify For</h3>
+            ${renderScholarships(data.scholarships)}
+
+            <h3 style="margin-top:1.5rem;">📋 Your Next Steps</h3>
+            <ol style="font-size:0.9rem; color:#555;">
+                ${data.next_steps.map(s => `<li style="padding:6px 0;">${s}</li>`).join('')}
+            </ol>
+        `;
+    }
+
+    function startQuiz(){
+        if (!Object.keys(lastScores).length) { alert("Analyze first!"); return; }
+        const weakest = Object.keys(lastScores).sort((a,b) => lastScores[a]-lastScores[b]).slice(0,3);
+        quizData = [];
+        weakest.forEach(s => quizFor(s).forEach(q => quizData.push({...q, subject: s})));
+        document.getElementById('quiz-result').innerHTML = '';
+        renderQuiz("🚀 Quick Quiz");
+    }
     async function startWeakTest(){
         const topics = store.get(studentContext.name + '_weaktopics', []);
         let items = topics.map(t => ({subject: t.subject, topic: t.topic}));
         if (!items.length) items = lastWeak.map(s => ({subject: s, topic: "full syllabus"}));
-        if (!items.length) { alert("First add your weak chapters in 🧠 Weak Topics!"); return; }
+        if (!items.length) { alert("Add weak chapters first!"); return; }
         await runTest(items, null);
     }
-
     async function startChapterTest(){
         const subj = document.getElementById('test-subject-select').value;
         const chapter = document.getElementById('test-chapter-select').value;
-        if (!subj || !chapter || chapter === 'No chapters') { alert('Pick a subject and chapter!'); return; }
+        if (!subj || !chapter || chapter === 'No chapters') { alert('Pick a chapter!'); return; }
         await runTest([{subject: subj, topic: chapter}], chapter);
     }
-
     async function runTest(items, chapterTitle){
-        document.getElementById('quiz-area').innerHTML = '<p>🤖 AI is writing your personal test... wait ~10 seconds.</p>';
-        document.getElementById('quiz-result').innerHTML = '';
+        document.getElementById('quiz-area').innerHTML = '<p>🤖 Generating test...</p>';
         try {
             const response = await fetch('/generate_test', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ board: studentContext.board, student_class: studentContext.student_class, items })
             });
             const data = await response.json();
-            if (!response.ok || !data.questions) throw new Error('no questions');
-            quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4 && typeof q.c === 'number');
+            if (!data.questions) throw new Error('no questions');
+            quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4);
             if (!quizData.length) throw new Error('invalid');
-            const title = chapterTitle
-                ? `📚 Chapter Test: ${escapeHtml(chapterTitle)} ${data.source === 'gemini' ? '✨' : '(offline)'}`
-                : (data.source === 'gemini' ? '🎯 AI Weak-Chapter Test ✨' : '🎯 Weak-Subject Test (offline)');
+            const title = chapterTitle ? `📚 ${escapeHtml(chapterTitle)}` : '🎯 AI Test';
             renderQuiz(title);
-        } catch (err) {
-            document.getElementById('quiz-area').innerHTML = '<p>❌ Could not generate the test right now. Try the Quick Quiz!</p>';
-        }
+        } catch (err) { document.getElementById('quiz-area').innerHTML = '<p>❌ Try Quick Quiz!</p>'; }
     }
-
     function renderQuiz(title){
         document.getElementById('quiz-area').innerHTML = `<h3>${title}</h3>` + quizData.map((q,i) => `
             <div class="quiz-q"><p><strong>Q${i+1}.</strong> ${escapeHtml(q.q)} <em>(${escapeHtml(q.subject || '')})</em></p>
             ${q.a.map((opt,oi) => `<label class="quiz-opt"><input type="radio" name="q${i}" value="${oi}"> ${escapeHtml(opt)}</label>`).join('')}</div>`).join('') +
-            `<button onclick="submitQuiz()">Submit Test ✅</button>`;
+            `<button onclick="submitQuiz()">Submit ✅</button>`;
     }
-
     function submitQuiz(){
         let correct = 0;
-        const wrong = [];
-        quizData.forEach((q,i) => {
-            const sel = document.querySelector(`input[name="q${i}"]:checked`);
-            if (sel && parseInt(sel.value) === q.c) correct++;
-            else wrong.push(q);
-        });
+        quizData.forEach((q,i) => { const sel = document.querySelector(`input[name="q${i}"]:checked`); if (sel && parseInt(sel.value) === q.c) correct++; });
         const pct = Math.round(correct / quizData.length * 100);
-        if (pct >= 80) { confetti(); playSound('success'); }
-        else if (pct >= 50) playSound('correct');
-        else playSound('wrong');
-        if (wrong.length) {
-            const key = studentContext.name + '_mistakes';
-            const list = store.get(key, []);
-            wrong.forEach(q => list.unshift({ subject: q.subject || 'General', note: `❌ ${q.q} → ✅ ${q.a[q.c]}`, date: new Date().toLocaleDateString() }));
-            store.set(key, list);
-            renderMistakes();
-        }
-        const msg = pct >= 80 ? '🌟 Excellent! Keep it up!' : pct >= 50 ? '👍 Good — wrong questions saved to your Mistake Notebook!' : '📕 Wrong questions saved to Mistake Notebook — revise them!';
-        document.getElementById('quiz-result').innerHTML = `<h3>Score: ${pct}% (${correct}/${quizData.length})</h3><p>${msg}</p>`;
+        if (pct >= 80) { confetti(); playSound('success'); } else playSound('correct');
+        document.getElementById('quiz-result').innerHTML = `<h3>Score: ${pct}% (${correct}/${quizData.length})</h3>`;
     }
 
-    // ---------- MISTAKE NOTEBOOK ----------
-    function renderMistakes(){
-        const list = store.get(studentContext.name + '_mistakes', []);
-        document.getElementById('mistake-list').innerHTML = list.map((m,i) => `<li><strong>${escapeHtml(m.subject)}:</strong> ${escapeHtml(m.note)} <em>(${m.date})</em> <button class="mini-btn" onclick="delMistake(${i})">✕</button></li>`).join('') || '<li>No mistakes recorded — great! 🎉</li>';
-    }
-    function addMistake(){
-        const subj = document.getElementById('mistake-subject-select').value;
-        const note = document.getElementById('mistake-input').value.trim();
-        if (!subj || !note) { alert("Select subject & describe the mistake"); return; }
-        const key = studentContext.name + '_mistakes';
-        const list = store.get(key, []); list.unshift({subject: subj, note, date: new Date().toLocaleDateString()});
-        store.set(key, list); document.getElementById('mistake-input').value = ''; renderMistakes();
-    }
-    function delMistake(i){ const key = studentContext.name + '_mistakes'; const l = store.get(key, []); l.splice(i,1); store.set(key,l); renderMistakes(); }
-
-    // ---------- REVISION ----------
-    function renderRevision(){
-        revSubjects = Object.keys(lastScores);
-        const rev = store.get(studentContext.name + '_revision', {});
-        document.getElementById('revision-list').innerHTML = revSubjects.map((s,i) => {
-            const last = rev[s];
-            const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
-            const flag = (days === null || days >= 2) ? '🔴' : '🟢';
-            return `<li>${flag} <strong>${escapeHtml(s)}</strong> — ${days === null ? 'Never revised' : `Revised ${days} day(s) ago`} <button class="mini-btn" onclick="markRevised(${i})">✅ Revised today</button></li>`;
-        }).join('') || '<li>Analyze first to track revisions.</li>';
-    }
-    function markRevised(i){
-        const key = studentContext.name + '_revision';
-        const rev = store.get(key, {}); rev[revSubjects[i]] = new Date().toISOString();
-        store.set(key, rev); renderRevision(); playSound('correct');
-    }
-
-    // ---------- AI CHAT ----------
     function startVoice(){
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) { alert("Voice not supported — please type."); return; }
+        if (!SR) { alert("Voice not supported"); return; }
         const rec = new SR(); rec.lang = 'en-IN';
         rec.onresult = e => { document.getElementById('doubt_input').value = e.results[0][0].transcript; };
-        rec.onerror = () => alert("🎤 Could not hear you!");
         rec.start();
     }
     async function askDoubt(){
@@ -647,64 +622,13 @@
             let data = null; try { data = JSON.parse(text); } catch(e) {}
             rm();
             if (data && data.answer) {
-                const src = data.source === 'gemini' ? '✨ AI (Gemini)' : '📘 Offline Tutor';
+                const src = data.source === 'gemini' ? '✨ AI' : '📘 Offline';
                 box.innerHTML += `<div class="chat-msg ai-msg">${escapeHtml(data.answer)}<span class="src-tag">${src}</span></div>`;
                 playSound('correct');
-            } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — wait 10s and ask again!</div>`;
-        } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">⏳ Network hiccup — try again in 10s!</div>`; }
+            } else box.innerHTML += `<div class="chat-msg ai-msg">⏳ Server busy — try again!</div>`;
+        } catch (err) { rm(); box.innerHTML += `<div class="chat-msg ai-msg">❌ Network error!</div>`; }
         box.scrollTop = box.scrollHeight;
     }
-
-    // ---------- 👨 TEACHER VIEW ----------
-    let allRecords = [];
-    async function loadRecords(){
-        try {
-            const response = await fetch('/records');
-            allRecords = await response.json();
-            const tbody = document.querySelector('#records-table tbody');
-            tbody.innerHTML = allRecords.map(r => `
-                <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:6px;">${new Date(r.timestamp).toLocaleDateString()}</td>
-                    <td style="padding:6px;">${escapeHtml(r.student_name || 'Student')}</td>
-                    <td style="padding:6px;">${escapeHtml(r.student_class)}</td>
-                    <td style="padding:6px;">${escapeHtml(r.board)}</td>
-                    <td style="padding:6px;"><strong>${r.avg_score}%</strong></td>
-                    <td style="padding:6px;">${escapeHtml(r.performance_level)}</td>
-                    <td style="padding:6px;">${Object.entries(r.subject_scores || {}).map(([s,v]) => `${s}:${v}`).join(', ')}</td>
-                </tr>`).join('') || '<tr><td colspan="7" style="padding:8px;">No data yet.</td></tr>';
-            document.getElementById('records-table').style.display = 'table';
-            playSound('correct');
-        } catch (err) { alert('Could not load records.'); }
-    }
-
-    function downloadCSV(){
-        if (!allRecords.length) { alert('Load data first!'); return; }
-        const rows = [['Date','Name','Board','Class','Stream','Study Hours/Week','Avg Score','Performance Level','Subject Scores']];
-        allRecords.forEach(r => rows.push([
-            new Date(r.timestamp).toLocaleDateString(),
-            r.student_name || 'Student',
-            r.board, r.student_class, r.stream, r.study_hours, r.avg_score, r.performance_level,
-            Object.entries(r.subject_scores || {}).map(([s,v]) => `${s}:${v}`).join(' | ')
-        ]));
-        const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'class_test_data.csv';
-        a.click();
-        playSound('success');
-    }
-
-    async function loadChart(){
-        try {
-            const response = await fetch('/history');
-            const h = await response.json();
-            const ctx = document.getElementById('progressChart').getContext('2d');
-            if (myChart) myChart.destroy();
-            myChart = new Chart(ctx, { type: 'line', data: { labels: h.map(r => new Date(r.timestamp).toLocaleDateString()).reverse(), datasets: [{ label: 'Average Score', data: h.map(r => r.avg_score).reverse(), borderColor: '#27ae60', tension: 0.3 }] }, options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } } });
-        } catch (err) { console.error(err); }
-    }
-    window.onload = loadChart;
     </script>
 </body>
 </html>

@@ -13,7 +13,7 @@ import requests
 import time
 from database import SessionLocal, StudentRecord, init_db
 
-app = FastAPI(title="AI Student Analyzer & Timetable Generator")
+app = FastAPI(title="AI Student Analyzer & Study Abroad Platform")
 init_db()
 
 MODEL_PATH = "student_model.pkl"
@@ -68,7 +68,14 @@ class TestGenInput(BaseModel):
     student_class: str = ""
     items: List[Dict[str, str]] = []
 
-# ---------- ✅ SELF-HEALING GEMINI CALLER ----------
+class AbroadInput(BaseModel):
+    student_name: str = "Student"
+    avg_score: float
+    ielts_band: float = 6.5
+    countries: List[str] = ["UK", "USA", "Canada", "Australia", "Germany"]
+    budget: str = "medium"  # low / medium / high
+
+# ---------- SELF-HEALING GEMINI ----------
 def gemini_answer(prompt):
     if not GEMINI_API_KEY:
         return None, None
@@ -131,20 +138,14 @@ def fallback_tutor(q):
             if len(part) >= 3:
                 try:
                     val = eval_expr(part)
-                    return f"📐 Calculation: {part} = {round(val, 4)}\n\nTip: Follow BODMAS order — Brackets, Orders (powers), Division/Multiplication, Addition/Subtraction."
+                    return f"📐 Calculation: {part} = {round(val, 4)}\n\nTip: Follow BODMAS order."
                 except Exception:
                     continue
     ql = q.lower()
     for key, ans in CANNED.items():
         if key in ql:
             return ans
-    if any(w in ql for w in ["math", "algebra", "geometry"]):
-        return "📐 For Math doubts: (1) Understand the formula, (2) Solve one example step-by-step, (3) Practice 5 similar problems. Tell me the exact topic (e.g., quadratic equations) and I'll guide you!"
-    if any(w in ql for w in ["science", "physics", "chemistry", "biology"]):
-        return "🔬 For Science doubts: read the concept, draw a diagram, and explain it in your own words. Tell me the exact topic and I'll break it down simply!"
-    if any(w in ql for w in ["english", "grammar", "essay"]):
-        return "📚 For English: read the question twice, note keywords, and answer in simple sentences. Tell me the exact topic (grammar, essay, comprehension)!"
-    return "🤔 I'm your offline tutor (add a free Gemini API key for full AI answers!). Try asking: 'What is photosynthesis?', 'Solve 12*8+4', 'What is a noun?', or tell me your exact topic and I'll give a study plan."
+    return "🤔 Try asking: 'What is photosynthesis?', 'Solve 12*8+4', or any study question!"
 
 @app.post("/ask")
 async def ask(data: DoubtInput):
@@ -152,30 +153,20 @@ async def ask(data: DoubtInput):
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
     ql = data.question.lower()
     wants_chapter = any(w in ql for w in ["chapter", "notes", "summary", "text of", "full topic"])
-
     if wants_chapter:
-        prompt = (f"You are a friendly personal tutor. {context} "
-                  f"The student wants chapter content. Provide a well-structured study summary with: "
-                  f"1) Chapter overview  2) Key concepts & definitions  3) Important formulas/points  "
-                  f"4) One solved example  5) Quick revision tips. "
-                  f"Use simple language suitable for their class. Keep under 500 words.\n\n"
+        prompt = (f"You are a friendly personal tutor. {context} Provide a study summary with: "
+                  f"1) Chapter overview 2) Key concepts 3) Formulas 4) One solved example 5) Revision tips. Under 500 words.\n\n"
                   f"Student request: {data.question}")
     else:
-        prompt = (f"You are a friendly personal tutor. {context} "
-                  f"Explain simply, suitable for their class, with one example. Keep under 200 words.\n\n"
+        prompt = (f"You are a friendly personal tutor. {context} Explain simply with one example. Under 200 words.\n\n"
                   f"Student doubt: {data.question}")
-
     answer, model_name = gemini_answer(prompt)
     if answer:
         if wants_chapter:
-            answer += "\n\n📕 For the exact official chapter text (free): https://ncert.nic.in/textbook.php"
+            answer += "\n\n📕 For official NCERT text: https://ncert.nic.in/textbook.php"
         return {"answer": answer, "source": "gemini"}
-
     if wants_chapter:
-        return {
-            "answer": "📕 I can't print the full copyrighted textbook text, but you can read it FREE on the official NCERT website: https://ncert.nic.in/textbook.php\n\nMeanwhile, ask me any topic or question from the chapter and I'll explain it simply!",
-            "source": "offline"
-        }
+        return {"answer": "📕 Read the official NCERT text free at https://ncert.nic.in/textbook.php. Ask me any topic and I'll explain!", "source": "offline"}
     return {"answer": fallback_tutor(data.question), "source": "offline"}
 
 # ---------- AI TEST GENERATOR ----------
@@ -213,10 +204,9 @@ async def generate_test(data: TestGenInput):
     if data.items:
         topics_txt = "; ".join(f"{i.get('subject','')}: {i.get('topic','')}" for i in data.items[:6])
         prompt = (f"You are an expert teacher for {data.board} {data.student_class}. "
-                  f"Create exactly 5 multiple-choice questions on these weak topics: {topics_txt}. "
-                  f"Each question must have 4 options and exactly one correct answer. "
-                  f"Respond ONLY with a valid JSON array, no extra text: "
-                  f'[{{"subject":"Math","q":"question text","a":["opt1","opt2","opt3","opt4"],"c":0}}]')
+                  f"Create exactly 5 multiple-choice questions on these topics: {topics_txt}. "
+                  f"Respond ONLY with a JSON array: "
+                  f'[{{"subject":"Math","q":"...","a":["a","b","c","d"],"c":0}}]')
         text, model_name = gemini_answer(prompt)
         if text:
             try:
@@ -233,7 +223,7 @@ async def generate_test(data: TestGenInput):
         questions += [{**q, "subject": s} for q in server_quiz_for(s)][:3]
     return {"questions": questions, "source": "offline"}
 
-# ---------- 🎓 CAREER GUIDANCE ENGINE ----------
+# ---------- CAREER GUIDANCE ----------
 CAREER_TRACKS = {
     "Engineering & Technology": ["Physics", "Math"],
     "Software, IT & AI": ["Computer Science", "Computer Applications", "Math"],
@@ -249,17 +239,17 @@ CAREER_TRACKS = {
 }
 
 CAREER_ROLES = {
-    "Engineering & Technology": ["Mechanical / Civil / Electrical Engineer", "Robotics & Automation Specialist", "ISRO / DRDO Scientist"],
+    "Engineering & Technology": ["Mechanical / Civil Engineer", "Robotics Specialist", "ISRO / DRDO Scientist"],
     "Software, IT & AI": ["Software Developer", "AI / ML Engineer", "Cybersecurity Expert"],
-    "Medical & Healthcare": ["Doctor (MBBS)", "Pharmacist / Drug Researcher", "Biotech Scientist"],
+    "Medical & Healthcare": ["Doctor (MBBS)", "Pharmacist", "Biotech Scientist"],
     "Pure Science & Research": ["Research Scientist", "Astrophysicist", "Lab Specialist"],
     "Data Science & Statistics": ["Data Scientist", "Statistician", "Business Analyst"],
-    "Commerce, Finance & CA": ["Chartered Accountant (CA)", "Investment Banker", "Financial Advisor"],
-    "Business & Management": ["Entrepreneur / Startup Founder", "Marketing Manager", "HR Manager"],
+    "Commerce, Finance & CA": ["Chartered Accountant", "Investment Banker", "Financial Advisor"],
+    "Business & Management": ["Entrepreneur", "Marketing Manager", "HR Manager"],
     "Law, Civil Services & Administration": ["IAS / IPS Officer", "Lawyer / Judge", "Policy Analyst"],
-    "Humanities, Teaching & Psychology": ["Teacher / Professor", "Psychologist", "Social Worker / NGO Leader"],
-    "Media, Writing & Languages": ["Journalist", "Content Writer / Author", "Translator / Language Expert"],
-    "Design, Arts & Creativity": ["Graphic / UI Designer", "Animator", "Architect (with Math)"],
+    "Humanities, Teaching & Psychology": ["Teacher / Professor", "Psychologist", "NGO Leader"],
+    "Media, Writing & Languages": ["Journalist", "Content Writer", "Translator"],
+    "Design, Arts & Creativity": ["Graphic / UI Designer", "Animator", "Architect"],
 }
 
 def suggest_careers(subject_scores):
@@ -272,6 +262,206 @@ def suggest_careers(subject_scores):
         results.append({"track": track, "roles": CAREER_ROLES[track], "match": round(avg)})
     results.sort(key=lambda x: x["match"], reverse=True)
     return results[:3]
+
+# ---------- 🌍 STUDY ABROAD ENGINE ----------
+UNIVERSITIES = {
+    "UK": {
+        "flag": "🇬🇧",
+        "dream": [
+            {"name": "University of Oxford", "min_gpa": 90, "min_ielts": 7.5, "cost": "high"},
+            {"name": "Imperial College London", "min_gpa": 88, "min_ielts": 7.0, "cost": "high"},
+            {"name": "University of Cambridge", "min_gpa": 92, "min_ielts": 7.5, "cost": "high"},
+        ],
+        "match": [
+            {"name": "University of Manchester", "min_gpa": 80, "min_ielts": 6.5, "cost": "high"},
+            {"name": "King's College London", "min_gpa": 82, "min_ielts": 6.5, "cost": "high"},
+            {"name": "University of Edinburgh", "min_gpa": 78, "min_ielts": 6.5, "cost": "medium"},
+        ],
+        "safety": [
+            {"name": "University of Leeds", "min_gpa": 70, "min_ielts": 6.0, "cost": "medium"},
+            {"name": "University of Birmingham", "min_gpa": 72, "min_ielts": 6.0, "cost": "medium"},
+            {"name": "University of Nottingham", "min_gpa": 68, "min_ielts": 6.0, "cost": "medium"},
+        ],
+    },
+    "USA": {
+        "flag": "🇺🇸",
+        "dream": [
+            {"name": "MIT", "min_gpa": 95, "min_ielts": 7.5, "cost": "high"},
+            {"name": "Stanford University", "min_gpa": 93, "min_ielts": 7.5, "cost": "high"},
+            {"name": "Harvard University", "min_gpa": 95, "min_ielts": 7.5, "cost": "high"},
+        ],
+        "match": [
+            {"name": "UC Davis", "min_gpa": 82, "min_ielts": 6.5, "cost": "high"},
+            {"name": "University of Texas at Austin", "min_gpa": 80, "min_ielts": 6.5, "cost": "medium"},
+            {"name": "Purdue University", "min_gpa": 78, "min_ielts": 6.5, "cost": "medium"},
+        ],
+        "safety": [
+            {"name": "Arizona State University", "min_gpa": 70, "min_ielts": 6.0, "cost": "medium"},
+            {"name": "University of Kansas", "min_gpa": 68, "min_ielts": 6.0, "cost": "low"},
+            {"name": "Iowa State University", "min_gpa": 72, "min_ielts": 6.0, "cost": "low"},
+        ],
+    },
+    "Canada": {
+        "flag": "🇨🇦",
+        "dream": [
+            {"name": "University of Toronto", "min_gpa": 88, "min_ielts": 7.0, "cost": "high"},
+            {"name": "McGill University", "min_gpa": 87, "min_ielts": 7.0, "cost": "high"},
+            {"name": "University of British Columbia", "min_gpa": 86, "min_ielts": 6.5, "cost": "high"},
+        ],
+        "match": [
+            {"name": "University of Waterloo", "min_gpa": 82, "min_ielts": 6.5, "cost": "medium"},
+            {"name": "McMaster University", "min_gpa": 80, "min_ielts": 6.5, "cost": "medium"},
+            {"name": "University of Ottawa", "min_gpa": 78, "min_ielts": 6.5, "cost": "medium"},
+        ],
+        "safety": [
+            {"name": "University of Calgary", "min_gpa": 72, "min_ielts": 6.0, "cost": "medium"},
+            {"name": "Dalhousie University", "min_gpa": 70, "min_ielts": 6.0, "cost": "low"},
+            {"name": "University of Manitoba", "min_gpa": 68, "min_ielts": 6.0, "cost": "low"},
+        ],
+    },
+    "Australia": {
+        "flag": "🇦🇺",
+        "dream": [
+            {"name": "University of Melbourne", "min_gpa": 88, "min_ielts": 7.0, "cost": "high"},
+            {"name": "University of Sydney", "min_gpa": 87, "min_ielts": 7.0, "cost": "high"},
+            {"name": "Australian National University", "min_gpa": 85, "min_ielts": 6.5, "cost": "high"},
+        ],
+        "match": [
+            {"name": "Monash University", "min_gpa": 80, "min_ielts": 6.5, "cost": "medium"},
+            {"name": "University of Queensland", "min_gpa": 78, "min_ielts": 6.5, "cost": "medium"},
+            {"name": "University of Adelaide", "min_gpa": 76, "min_ielts": 6.5, "cost": "medium"},
+        ],
+        "safety": [
+            {"name": "University of Wollongong", "min_gpa": 70, "min_ielts": 6.0, "cost": "low"},
+            {"name": "RMIT University", "min_gpa": 68, "min_ielts": 6.0, "cost": "low"},
+            {"name": "Deakin University", "min_gpa": 66, "min_ielts": 6.0, "cost": "low"},
+        ],
+    },
+    "Germany": {
+        "flag": "🇩🇪",
+        "dream": [
+            {"name": "TU Munich", "min_gpa": 88, "min_ielts": 6.5, "cost": "low"},
+            {"name": "RWTH Aachen", "min_gpa": 85, "min_ielts": 6.5, "cost": "low"},
+            {"name": "Heidelberg University", "min_gpa": 87, "min_ielts": 6.5, "cost": "low"},
+        ],
+        "match": [
+            {"name": "TU Berlin", "min_gpa": 80, "min_ielts": 6.5, "cost": "low"},
+            {"name": "University of Stuttgart", "min_gpa": 78, "min_ielts": 6.0, "cost": "low"},
+            {"name": "KIT Karlsruhe", "min_gpa": 80, "min_ielts": 6.5, "cost": "low"},
+        ],
+        "safety": [
+            {"name": "TU Dresden", "min_gpa": 72, "min_ielts": 6.0, "cost": "low"},
+            {"name": "University of Hamburg", "min_gpa": 74, "min_ielts": 6.0, "cost": "low"},
+            {"name": "TU Darmstadt", "min_gpa": 75, "min_ielts": 6.0, "cost": "low"},
+        ],
+    },
+}
+
+SCHOLARSHIPS = {
+    "UK": [
+        {"name": "Chevening Scholarship", "value": "Full tuition + living", "min_score": 85, "min_ielts": 6.5},
+        {"name": "Commonwealth Scholarship", "value": "Full funding", "min_score": 80, "min_ielts": 6.5},
+        {"name": "GREAT Scholarships", "value": "£10,000", "min_score": 75, "min_ielts": 6.0},
+    ],
+    "USA": [
+        {"name": "Fulbright-Nehru Fellowship", "value": "Full funding", "min_score": 85, "min_ielts": 6.5},
+        {"name": "Stanford Reliance Fellowship", "value": "Full tuition", "min_score": 90, "min_ielts": 7.0},
+        {"name": "Inlaks Shivdasani", "value": "Up to $100K", "min_score": 80, "min_ielts": 6.5},
+    ],
+    "Canada": [
+        {"name": "Vanier Canada Graduate Scholarship", "value": "$50,000/year", "min_score": 85, "min_ielts": 6.5},
+        {"name": "Ontario Graduate Scholarship", "value": "$15,000/year", "min_score": 80, "min_ielts": 6.5},
+        {"name": "Lester B. Pearson Scholarship", "value": "Full funding", "min_score": 88, "min_ielts": 6.5},
+    ],
+    "Australia": [
+        {"name": "Australia Awards Scholarship", "value": "Full funding", "min_score": 80, "min_ielts": 6.5},
+        {"name": "Destination Australia", "value": "$15,000/year", "min_score": 75, "min_ielts": 6.0},
+        {"name": "RTP Scholarship", "value": "Full tuition + stipend", "min_score": 85, "min_ielts": 6.5},
+    ],
+    "Germany": [
+        {"name": "DAAD Scholarship", "value": "Full funding", "min_score": 80, "min_ielts": 6.0},
+        {"name": "Heinrich Böll Foundation", "value": "€850/month", "min_score": 78, "min_ielts": 6.0},
+        {"name": "Konrad Adenauer Stiftung", "value": "€850/month", "min_score": 80, "min_ielts": 6.0},
+    ],
+}
+
+def check_abroad_eligibility(avg_score, ielts_band, countries, budget):
+    budget_order = {"low": 1, "medium": 2, "high": 3}
+    user_budget = budget_order.get(budget, 2)
+    
+    # Overall eligibility score (weighted)
+    score_part = min(avg_score, 100) * 0.5
+    ielts_part = min(ielts_band, 9) * 5 * 0.3
+    profile_part = min(avg_score * 0.2, 20)
+    eligibility = round(min(score_part + ielts_part + profile_part, 100))
+    
+    # University matches by tier
+    dream_unis, match_unis, safety_unis = [], [], []
+    all_scholarships = []
+    
+    for country in countries:
+        if country not in UNIVERSITIES:
+            continue
+        data = UNIVERSITIES[country]
+        flag = data["flag"]
+        
+        # Dream: top 2 that qualify
+        qualified_dream = [u for u in data["dream"]
+                           if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]
+                           and budget_order.get(u["cost"], 2) <= user_budget]
+        dream_unis.extend([{"country": country, "flag": flag, "tier": "Dream", **u} for u in qualified_dream[:2]])
+        
+        # Match: top 2
+        qualified_match = [u for u in data["match"]
+                           if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]
+                           and budget_order.get(u["cost"], 2) <= user_budget]
+        match_unis.extend([{"country": country, "flag": flag, "tier": "Match", **u} for u in qualified_match[:2]])
+        
+        # Safety: top 2
+        qualified_safety = [u for u in data["safety"]
+                            if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]]
+        safety_unis.extend([{"country": country, "flag": flag, "tier": "Safety", **u} for u in qualified_safety[:2]])
+        
+        # Scholarships
+        for s in SCHOLARSHIPS.get(country, []):
+            if avg_score >= s["min_score"] and ielts_band >= s["min_ielts"]:
+                all_scholarships.append({"country": country, "flag": flag, **s})
+    
+    # Next steps based on profile
+    next_steps = []
+    if ielts_band < 7.0:
+        next_steps.append("📚 Prepare for IELTS — aim for 7.0+ to unlock top universities")
+    if avg_score < 85:
+        next_steps.append("📈 Focus on raising your GPA to 85+ for Dream-tier universities")
+    if not dream_unis:
+        next_steps.append("🎯 Your profile qualifies for Match universities — strengthen it for Dream schools")
+    next_steps.extend([
+        "✍️ Start writing your Statement of Purpose (SOP) — takes 2-3 weeks",
+        "📨 Request 2 Letters of Recommendation from teachers",
+        "💳 Prepare for visa documentation (bank statements, passport)",
+    ])
+    if all_scholarships:
+        next_steps.append(f"💰 Apply for {len(all_scholarships)} scholarships you qualify for!")
+    
+    return {
+        "eligibility_score": eligibility,
+        "dream": dream_unis,
+        "match": match_unis,
+        "safety": safety_unis,
+        "scholarships": all_scholarships[:6],
+        "next_steps": next_steps[:5],
+        "total_universities": len(dream_unis) + len(match_unis) + len(safety_unis)
+    }
+
+@app.post("/study_abroad")
+async def study_abroad(data: AbroadInput):
+    try:
+        result = check_abroad_eligibility(
+            data.avg_score, data.ielts_band, data.countries, data.budget
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
@@ -319,46 +509,39 @@ def activity_for(score):
 
 def generate_timetable(study_hours, subject_scores, start_time="16:00"):
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
     total_gap = sum(max(0, 100 - s) for s in subject_scores.values())
     if total_gap == 0:
         weights = {s: 1/len(subject_scores) for s in subject_scores}
     else:
         weights = {s: max(0, 100 - sc) / total_gap for s, sc in subject_scores.items()}
-
     ordered = sorted(subject_scores.keys(), key=lambda s: subject_scores[s])
     weakest = ordered[0]
-
     try:
         sh, sm = [int(x) for x in start_time.split(":")]
     except Exception:
         sh, sm = 16, 0
-
     daily_minutes = (study_hours * 60) / 6.0
     timetable = []
-
     for i, day in enumerate(days):
         tasks = []
         h, m = sh, sm
         if day == "Sunday":
             tasks.append(f"📝 {fmt_time(h, m)} – Weekly Mock Test: {weakest} (60 min)")
             h, m = add_minutes(h, m, 70)
-            tasks.append(f"🔁 {fmt_time(h, m)} – Review test mistakes + formula sheet (30 min)")
-            h, m = add_minutes(h, m, 35)
-            tasks.append(f"🧘 {fmt_time(h, m)} – Rest, family time & light reading")
+            tasks.append(f"🔁 {fmt_time(h, m)} – Review mistakes (30 min)")
+            tasks.append(f"🧘 {fmt_time(h, m)} – Rest & light reading")
         else:
             order = ordered[i % len(ordered):] + ordered[:i % len(ordered)]
             for idx, subj in enumerate(order):
                 mins = int(round(daily_minutes * weights[subj] / 5) * 5)
-                if mins < 20:
-                    continue
+                if mins < 20: continue
                 eh, em = add_minutes(h, m, mins)
                 tasks.append(f"{emoji_for(subj)} {fmt_time(h, m)}–{fmt_time(eh, em)} {subj}: {activity_for(subject_scores[subj])} ({mins} min)")
                 if idx < len(order) - 1:
-                    tasks.append(f"☕ {fmt_time(eh, em)} – Short break (10 min)")
+                    tasks.append(f"☕ {fmt_time(eh, em)} – Break (10 min)")
                 h, m = add_minutes(eh, em, 10)
-            tasks.append("✏️ Homework / school assignments")
-            tasks.append(f"🎯 Night target: revise today's {weakest} notes for 10 min before bed")
+            tasks.append("✏️ Homework / Assignments")
+            tasks.append(f"🎯 Night: revise {weakest} for 10 min")
         timetable.append({"day": day, "tasks": tasks})
     return timetable
 
@@ -366,35 +549,27 @@ def generate_timetable(study_hours, subject_scores, start_time="16:00"):
 async def predict(data: StudentInput):
     if model is None:
         raise HTTPException(status_code=500, detail="Model failed to load")
-
     try:
         scores = list(data.subject_scores.values())
         if not scores:
             raise ValueError("No subject scores provided")
-
         class_num = int(data.student_class.replace("Class ", ""))
         avg = sum(scores) / len(scores)
         mn = min(scores)
         mx = max(scores)
-
         features = np.array([[class_num, data.study_hours, avg, mn, mx]])
         prediction = model.predict(features)[0]
         confidence = float(max(model.predict_proba(features)[0]))
-
         weak_subjects = [s for s, sc in data.subject_scores.items() if sc < 75]
         recommendations = []
         for subj, sc in sorted(data.subject_scores.items(), key=lambda x: x[1]):
             advice = get_advice(subj, sc)
-            if advice:
-                recommendations.append(advice)
-
+            if advice: recommendations.append(advice)
         if data.study_hours < 14:
-            recommendations.append("⏰ Low study hours! Aim for at least 2-3 hours/day")
+            recommendations.append("⏰ Low study hours! Aim for 2-3 hours/day")
         if not weak_subjects:
-            recommendations.append("🌟 Excellent scores! Focus on advanced problems & revision")
-
+            recommendations.append("🌟 Excellent scores! Focus on advanced problems")
         timetable = generate_timetable(data.study_hours, data.subject_scores, data.start_time)
-
         db = SessionLocal()
         try:
             record = StudentRecord(
@@ -411,7 +586,6 @@ async def predict(data: StudentInput):
             db.commit()
         finally:
             db.close()
-
         return {
             "performance_level": prediction,
             "confidence": round(confidence * 100, 1),
