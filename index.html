@@ -6,7 +6,6 @@
     <title>AI Study Abroad Platform</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#3498db">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #f5f5f5; }
         .layer { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 1.2rem; }
@@ -20,16 +19,9 @@
         .dash-nav { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 1.2rem; }
         .dash-nav a { background: #2c3e50; color: white; padding: 6px 12px; border-radius: 20px; text-decoration: none; font-size: 0.8rem; }
         .weak-tag { background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; }
-        .timetable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 1rem; }
-        .day-card { background: white; padding: 10px; border-radius: 6px; border: 1px solid #d4e6f1; }
-        .day-card h4 { margin: 0 0 8px 0; color: #2980b9; font-size: 0.9rem; text-align: center; }
-        .day-card ul, .mod-list { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
+        .mod-list { list-style: none; padding: 0; margin: 0; font-size: 0.8rem; color: #555; }
         .mod-list li { padding: 6px 0; border-bottom: 1px dashed #eee; }
-        .day-card li { padding: 4px 0; border-bottom: 1px dashed #eee; }
-        .task-text { cursor: pointer; }
-        .done-task .task-text { text-decoration: line-through; opacity: 0.55; }
         .mini-btn { width: auto; padding: 0 4px; margin: 0; background: none; border: none; color: inherit; font-size: 0.75rem; cursor: pointer; }
-        .mini-btn:hover { background: none; opacity: 0.7; }
         .row { display: flex; gap: 8px; margin-top: 0.5rem; }
         .row input, .row select { margin-top: 0; }
         .row button { width: auto; margin: 0; padding: 0 14px; }
@@ -41,10 +33,8 @@
         .quiz-opt { display: block; font-weight: normal; margin: 4px 0; }
         .quiz-q { border-bottom: 1px solid #eee; padding: 8px 0; }
         #layer2, #dashboard { display: none; }
-        /* Eligibility meter */
-        .elig-meter { height: 24px; background: #ecf0f1; border-radius: 12px; overflow: hidden; position: relative; margin: 10px 0; }
-        .elig-fill { height: 100%; background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60); transition: width 1s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
-        /* University cards */
+        .elig-meter { height: 24px; background: #ecf0f1; border-radius: 12px; overflow: hidden; margin: 10px 0; }
+        .elig-fill { height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 1s; }
         .uni-card { border: 1px solid #e0e0e0; border-left: 4px solid; border-radius: 8px; padding: 12px; margin: 8px 0; background: #fff; }
         .uni-card.dream { border-left-color: #9b59b6; }
         .uni-card.match { border-left-color: #3498db; }
@@ -59,127 +49,92 @@
         .country-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
         .country-toggle label { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: #ecf0f1; border-radius: 20px; cursor: pointer; font-weight: normal; font-size: 0.85rem; margin: 0; }
         .country-toggle input { width: auto; margin: 0; }
-        .country-toggle label:has(input:checked) { background: #3498db; color: white; }
         .hero-gradient { background: linear-gradient(135deg, #3498db, #9b59b6); color: white; padding: 2rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; }
         .hero-gradient h1 { color: white; margin: 0; }
         .hero-gradient p { margin: 0.5rem 0 0 0; opacity: 0.9; }
-        @media print {
-            body { background: white; }
-            .layer:not(.printable), .no-print, .dash-nav { display: none !important; }
-            .layer { box-shadow: none; border: 1px solid #ddd; }
-        }
+        .big-score { font-size: 3rem; font-weight: bold; text-align: center; margin: 0.5rem 0; }
     </style>
 </head>
 <body>
     <div class="hero-gradient">
         <h1>🌍 AI Study Abroad Platform</h1>
-        <p>From your marks to your dream university — powered by AI</p>
+        <p>One percentage → your dream university, career & scholarships</p>
     </div>
-    <button id="sound-toggle" class="no-print" onclick="toggleSound()" title="Sound on/off"
+    <button id="sound-toggle" onclick="toggleSound()" title="Sound on/off"
         style="position:fixed; top:12px; right:12px; width:48px; height:48px; padding:0; margin:0; background:#2c3e50; color:white; border-radius:50%; z-index:999;">🔊</button>
 
     <div class="layer">
         <h2>👤 Student Profile</h2>
         <label>🙋 Student Name</label>
-        <input type="text" id="student_name" placeholder="e.g., Rahul Sharma">
-        <label>Board</label>
-        <select id="board" onchange="resetLayer2()">
-            <option value="" disabled selected>-- Choose board --</option>
-            <option value="CBSE">CBSE</option><option value="ICSE">ICSE</option><option value="SSC">SSC (State Board)</option>
+        <input type="text" id="student_name" placeholder="e.g., Krushna">
+        <label>🎓 Education Level</label>
+        <select id="level">
+            <option value="Class 12">Class 12 (Higher Secondary)</option>
+            <option value="Graduation">Graduation (Degree)</option>
         </select>
-        <label>Class</label>
-        <select id="student_class" onchange="toggleStream()">
-            <option value="" disabled selected>-- Choose class --</option>
-            <option value="Class 6">Class 6</option><option value="Class 7">Class 7</option>
-            <option value="Class 8">Class 8</option><option value="Class 9">Class 9</option>
-            <option value="Class 10">Class 10</option><option value="Class 11">Class 11</option>
-            <option value="Class 12">Class 12</option>
+        <label>Stream / Field</label>
+        <select id="stream">
+            <option value="Science">Science</option>
+            <option value="Commerce">Commerce</option>
+            <option value="Arts">Arts / Humanities</option>
         </select>
-        <div id="stream_wrap" style="display:none;">
-            <label>Stream</label>
-            <select id="stream" onchange="resetLayer2()">
-                <option value="" disabled selected>-- Choose stream --</option>
-                <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Arts">Arts / Humanities</option>
-            </select>
-        </div>
         <button onclick="submitLayer1()">Next →</button>
     </div>
 
     <div class="layer" id="layer2">
-        <h2>📊 Enter Marks & Preferences</h2>
+        <h2>📊 Enter Your Percentage</h2>
         <p class="layer-subtitle" id="layer2-subtitle"></p>
-        <label>Available Study Hours Per Week</label>
-        <input type="number" id="study_hours" placeholder="e.g., 20" min="1" max="100">
-        <label>⏰ Daily Study Start Time</label>
-        <input type="time" id="start_time" value="16:00">
-        <div id="subject_inputs"></div>
-        <button onclick="analyze()">Analyze Profile & Check Abroad Eligibility →</button>
+        <label>Overall Percentage (%)</label>
+        <input type="number" id="percentage" placeholder="e.g., 82" min="0" max="100" step="0.01">
+        <button onclick="analyze()">Analyze & Check Abroad Eligibility →</button>
     </div>
 
     <div id="dashboard">
-        <div class="dash-nav no-print">
+        <div class="dash-nav">
             <a href="#abroad">🌍 Study Abroad</a>
-            <a href="#plan">🎯 Plan</a><a href="#weak">🧠 Weak</a>
-            <a href="#career">🎓 Careers</a><a href="#quiz">📝 Tests</a>
-            <a href="#ai">🤖 AI Solver</a>
+            <a href="#career">🎓 Careers</a><a href="#weak">🧠 Weak Chapters</a>
+            <a href="#quiz">📝 Tests</a><a href="#ai">🤖 AI Solver</a>
         </div>
 
-        <div class="layer printable">
-            <h2>📊 Performance Dashboard</h2>
+        <div class="layer">
+            <h2>📊 Performance Result</h2>
             <div id="result"></div>
-            <canvas id="radarChart" style="margin-top:1rem;"></canvas>
         </div>
 
-        <!-- 🌍 STUDY ABROAD ELIGIBILITY (HERO SECTION) -->
-        <div class="layer printable" id="abroad">
+        <div class="layer" id="abroad">
             <h2>🌍 Your Study Abroad Eligibility</h2>
-            <p class="layer-subtitle">Real universities matched to your marks + IELTS + budget</p>
-
-            <div class="no-print">
+            <p class="layer-subtitle">Real universities matched to your % + IELTS + budget</p>
+            <div>
                 <label>🎯 Expected IELTS Band</label>
                 <input type="number" id="ielts_band" value="6.5" min="4" max="9" step="0.5">
-
                 <label>💰 Budget Level</label>
                 <select id="budget">
                     <option value="low">Low (Germany / scholarships)</option>
                     <option value="medium" selected>Medium (most universities)</option>
                     <option value="high">High (top-tier / USA / UK)</option>
                 </select>
-
-                <label>🌍 Target Countries (pick multiple)</label>
+                <label>🌍 Target Countries</label>
                 <div class="country-toggle">
                     <label><input type="checkbox" value="UK" checked> 🇬🇧 UK</label>
-                    <label><input type="checkbox" value="USA"> 🇺🇸 USA</label>
+                    <label><input type="checkbox" value="USA"> 🇺 USA</label>
                     <label><input type="checkbox" value="Canada" checked> 🇨🇦 Canada</label>
                     <label><input type="checkbox" value="Australia"> 🇦🇺 Australia</label>
                     <label><input type="checkbox" value="Germany"> 🇩🇪 Germany</label>
                 </div>
-
                 <button onclick="checkAbroad()" style="background:#8e44ad;">🚀 Check My Eligibility</button>
             </div>
-
             <div id="abroad-result"></div>
         </div>
 
-        <div class="layer printable" id="plan">
-            <h2>🎯 Today's Study Plan</h2>
-            <p class="layer-subtitle" id="today-label"></p>
-            <ul class="mod-list" id="today-list"></ul>
-        </div>
-        <div class="layer printable" id="timetable-section" style="display:none;">
-            <div class="timetable-grid" id="timetable-grid"></div>
-        </div>
-
-        <div class="layer printable" id="career">
+        <div class="layer" id="career">
             <h2>🎓 Career Guidance</h2>
-            <p class="layer-subtitle">Top career paths matched to your strongest subjects</p>
+            <p class="layer-subtitle">Best paths for your stream & marks</p>
             <div id="career-list"></div>
         </div>
 
         <div class="layer" id="weak">
-            <h2>🧠 Weak Topics & Chapters</h2>
-            <p id="weak-subjects"></p>
-            <div class="row no-print">
+            <h2>🧠 Weak Chapters Tracker</h2>
+            <div class="row">
                 <select id="weak-subject-select" onchange="populateChapters()"></select>
                 <select id="weak-chapter-select"></select>
                 <button onclick="addWeak()">+ Add</button>
@@ -189,9 +144,9 @@
 
         <div class="layer" id="quiz">
             <h2>📝 Practice Tests</h2>
-            <button class="no-print" onclick="startQuiz()">🚀 Quick Quiz</button>
-            <button class="no-print" onclick="startWeakTest()" style="background:#e67e22;">🎯 AI Weak-Chapter Test</button>
-            <div class="row no-print" style="margin-top:0.8rem;">
+            <button onclick="startQuiz()">🚀 Quick Quiz</button>
+            <button onclick="startWeakTest()" style="background:#e67e22;">🎯 AI Weak-Chapter Test</button>
+            <div class="row" style="margin-top:0.8rem;">
                 <select id="test-subject-select" onchange="populateTestChapters()"></select>
                 <select id="test-chapter-select"></select>
                 <button onclick="startChapterTest()" style="background:#16a085; margin:0;">📚 Chapter Test</button>
@@ -203,21 +158,19 @@
         <div class="layer" id="ai">
             <h2>🤖 AI Doubt Solver</h2>
             <div id="chat-box">
-                <div class="chat-msg ai-msg">Hi! Ask me anything — even "Which university should I apply to with 85%?"</div>
+                <div class="chat-msg ai-msg">Hi! Ask me anything — studies, chapters, or "which university fits 85%?"</div>
             </div>
             <div class="row">
                 <input type="text" id="doubt_input" placeholder="Type or speak..." onkeydown="if(event.key==='Enter') askDoubt()">
-                <button class="no-print" style="background:#e74c3c; width:60px;" onclick="startVoice()">🎤</button>
+                <button style="background:#e74c3c; width:60px;" onclick="startVoice()">🎤</button>
             </div>
-            <button class="no-print" onclick="askDoubt()">Ask AI 🤖</button>
+            <button onclick="askDoubt()">Ask AI 🤖</button>
         </div>
     </div>
 
     <script>
-    let myChart = null, myRadar = null;
-    let currentTimetable = null, aiTimetable = null;
-    let lastScores = {}, lastAvg = 0, lastWeak = [], quizData = [];
-    let studentContext = { name: "Student", board: "", student_class: "", stream: "None", weak_subjects: [] };
+    let lastAvg = 0, quizData = [], streamSubjects = [];
+    let studentContext = { name: "Student", level: "Class 12", stream: "Science", weak_subjects: [] };
 
     const store = {
         get(k, d){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } },
@@ -244,12 +197,11 @@
             };
             if (type === 'click') beep(650, 0, 0.06, 'square', 0.06);
             if (type === 'correct') { beep(880, 0, 0.1); beep(1175, 0.12, 0.2); }
-            if (type === 'wrong') { beep(220, 0, 0.2, 'sawtooth', 0.12); }
             if (type === 'success') { beep(523,0,0.15); beep(659,0.16,0.15); beep(784,0.32,0.2); beep(1047,0.5,0.4); }
         } catch(e) {}
     }
     function confetti(){
-        const emojis = ['🎉','🎓','⭐','🌟','✨','🏆','🌍'];
+        const emojis = ['🎉','','⭐','🌟','✨','🏆','🌍'];
         for (let i = 0; i < 30; i++) {
             const el = document.createElement('div');
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -262,54 +214,62 @@
     document.addEventListener('click', e => { if (e.target.closest('button')) playSound('click'); });
     window.addEventListener('load', updateSoundIcon);
 
-    const EMOJIS = { "Math":"📐","Science":"🔬","English":"📚","Hindi":"🖋️","Social Studies":"🌍","Physics":"⚛️","Chemistry":"🧪","Computer Science":"💻","Computer Applications":"💻","Marathi":"📖","Accountancy":"🧾","Business Studies":"💼","Economics":"📈","History":"🏛️","Political Science":"🗳️","Geography":"🗺️" };
-
     const CHAPTERS = {
         "Math": {
-            10: ["Real Numbers","Polynomials","Linear Equations","Quadratic Equations","Arithmetic Progressions","Triangles","Coordinate Geometry","Trigonometry","Circles","Statistics","Probability"],
-            11: ["Sets","Relations","Trigonometric Functions","Complex Numbers","Linear Inequalities","Permutations","Binomial Theorem","Sequences","Straight Lines","Conic Sections","Limits","Statistics"],
             12: ["Relations & Functions","Inverse Trig","Matrices","Determinants","Continuity","Application of Derivatives","Integrals","Differential Equations","Vectors","3D Geometry","Linear Programming","Probability"],
             default: ["Algebra","Geometry","Trigonometry","Calculus","Probability"]
         },
         "Physics": {
-            11: ["Units & Measurement","Motion","Laws of Motion","Work & Energy","Gravitation","Thermodynamics","Oscillations","Waves"],
             12: ["Electric Charges","Electrostatic Potential","Current Electricity","Magnetism","Electromagnetic Induction","AC Circuits","EM Waves","Optics","Dual Nature","Atoms","Nuclei","Semiconductors"],
             default: ["Mechanics","Electrodynamics","Optics","Modern Physics"]
         },
         "Chemistry": {
-            11: ["Basic Concepts","Atomic Structure","Periodicity","Chemical Bonding","States of Matter","Thermodynamics","Equilibrium","Redox","Organic Basics","Hydrocarbons"],
             12: ["Solid State","Solutions","Electrochemistry","Chemical Kinetics","Coordination Compounds","Haloalkanes","Alcohols","Aldehydes","Amines","Biomolecules"],
             default: ["Physical Chemistry","Organic Chemistry","Inorganic Chemistry"]
         },
-        "default": { default: ["Chapter 1","Chapter 2","Chapter 3"] }
+        "English": { default: ["Reading Comprehension","Writing Skills","Grammar: Tenses","Poetry and Literature","Vocabulary"] },
+        "Computer Science": { default: ["Computer Basics","Programming Logic","Python Basics","Data Types","Loops and Functions","Internet and Safety"] },
+        "Accountancy": { default: ["Journal and Ledger","Trial Balance","Depreciation","Final Accounts","Partnership","Company Accounts"] },
+        "Business Studies": { default: ["Nature of Management","Planning","Organising","Directing","Controlling","Marketing"] },
+        "Economics": { default: ["Demand and Elasticity","Cost and Revenue","Market Forms","National Income","Money and Banking"] },
+        "History": { default: ["Bricks Beads and Bones","Kinship and Caste","Bhakti and Sufi Movements","Colonialism","Nationalism"] },
+        "Political Science": { default: ["Constitution","Rights","Federalism","Democracy","International Relations"] },
+        "Geography": { default: ["Physical Geography","Climate","Population","Agriculture","Minerals","Transport"] },
+        "Science": { default: ["Physics Concepts","Chemistry Concepts","Biology Concepts"] },
+        "Hindi": { default: ["व्याकरण","अपठित गद्यांश","लेखन","साहित्य"] }
     };
 
-    function chaptersFor(subject, cls){
-        const c = parseInt(cls.replace("Class ", ""));
-        const m = CHAPTERS[subject] || CHAPTERS["default"];
-        return m[c] || m.default || [];
+    function chaptersFor(subject){
+        const m = CHAPTERS[subject];
+        if (!m) return [];
+        return m[12] || m.default || [];
     }
-
     function populateChapters(){
         const subj = document.getElementById('weak-subject-select').value;
-        const list = chaptersFor(subj, studentContext.student_class);
+        const list = chaptersFor(subj);
         document.getElementById('weak-chapter-select').innerHTML = list.length
             ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
             : '<option value="">No chapter list</option>';
     }
     function populateTestChapters(){
         const subj = document.getElementById('test-subject-select').value;
-        const list = chaptersFor(subj, studentContext.student_class);
+        const list = chaptersFor(subj);
         document.getElementById('test-chapter-select').innerHTML = list.length
             ? list.map(c => `<option>${escapeHtml(c)}</option>`).join('')
             : '<option value="">No chapters</option>';
     }
 
+    function getSubjects(stream) {
+        if (stream === "Science")  return ["Math","Physics","Chemistry","English","Computer Science"];
+        if (stream === "Commerce") return ["Accountancy","Business Studies","Economics","English","Math"];
+        return ["History","Political Science","Geography","English","Hindi"];
+    }
+
     const QUIZ = {
         Math: [
             {q:"15% of 200 = ?", a:["20","30","40","25"], c:1},
+            {q:"12 × 8 + 4 = ?", a:["96","100","104","98"], c:1},
             {q:"Square root of 144 = ?", a:["10","11","12","14"], c:2},
-            {q:"If x + 5 = 12, x = ?", a:["6","7","8","9"], c:1},
         ],
         Science: [
             {q:"Gas absorbed by plants?", a:["Oxygen","Nitrogen","CO2","Hydrogen"], c:2},
@@ -326,80 +286,43 @@
         ]
     };
     function quizFor(s){
-        if (/math/i.test(s)) return QUIZ.Math;
-        if (/science|physics|chemistry/i.test(s)) return QUIZ.Science;
+        if (/math|accountancy|economics/i.test(s)) return QUIZ.Math;
+        if (/science|physics|chemistry|biology|computer/i.test(s)) return QUIZ.Science;
         if (/english|hindi/i.test(s)) return QUIZ.English;
         return QUIZ.Social;
     }
 
-    function getSubjects(board, cls, stream) {
-        const c = parseInt(cls.replace("Class ", ""));
-        if (c <= 10) return ["Math","Science","English","Hindi","Social Studies"];
-        if (stream === "Science") return ["Math","Physics","Chemistry","English","Computer Science"];
-        if (stream === "Commerce") return ["Accountancy","Business Studies","Economics","English","Math"];
-        return ["History","Political Science","Geography","English","Hindi"];
-    }
-
-    function toggleStream() {
-        const c = parseInt(document.getElementById('student_class').value.replace("Class ", ""));
-        document.getElementById('stream_wrap').style.display = (c >= 11) ? 'block' : 'none';
-        resetLayer2();
-    }
-    function resetLayer2() {
-        document.getElementById('layer2').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'none';
-    }
-
     function submitLayer1() {
         const name = document.getElementById('student_name').value.trim() || "Student";
-        const board = document.getElementById('board').value;
-        const cls = document.getElementById('student_class').value;
-        const c = parseInt(cls.replace("Class ", ""));
-        const stream = (c >= 11) ? document.getElementById('stream').value : "None";
-        if (!board || !cls || (c >= 11 && !stream)) { alert("Please select Board, Class" + (c >= 11 ? " and Stream" : "") + "!"); return; }
-        studentContext = { name, board, student_class: cls, stream, weak_subjects: [] };
-        const subjects = getSubjects(board, cls, stream);
-        document.getElementById('layer2-subtitle').textContent = `${name} • ${board} • ${cls}` + (stream !== "None" ? ` • ${stream}` : "");
-        document.getElementById('subject_inputs').innerHTML = subjects.map(s => `
-            <label>${EMOJIS[s] || '📘'} ${s} Score (%)</label>
-            <input type="number" class="subject-score" data-subject="${s}" min="0" max="100" placeholder="e.g., 70">
-        `).join('');
+        const level = document.getElementById('level').value;
+        const stream = document.getElementById('stream').value;
+        studentContext = { name, level, stream, weak_subjects: [] };
+        streamSubjects = getSubjects(stream);
+        document.getElementById('layer2-subtitle').textContent = `${name} • ${level} • ${stream}`;
         document.getElementById('layer2').style.display = 'block';
         document.getElementById('layer2').scrollIntoView({ behavior: 'smooth' });
     }
 
     async function analyze() {
-        const studyHours = parseFloat(document.getElementById('study_hours').value);
-        const startTime = document.getElementById('start_time').value || "16:00";
-        const subjectScores = {};
-        let valid = true;
-        document.querySelectorAll('.subject-score').forEach(inp => {
-            const v = parseFloat(inp.value);
-            if (isNaN(v)) valid = false;
-            subjectScores[inp.dataset.subject] = v;
-        });
-        if (isNaN(studyHours) || !valid) { alert("Please fill ALL fields!"); return; }
+        const pct = parseFloat(document.getElementById('percentage').value);
+        if (isNaN(pct) || pct < 0 || pct > 100) { alert("Please enter a valid percentage (0-100)!"); return; }
 
         try {
             const response = await fetch('/predict', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_name: studentContext.name, board: studentContext.board, student_class: studentContext.student_class, stream: studentContext.stream, study_hours: studyHours, start_time: startTime, subject_scores: subjectScores })
+                body: JSON.stringify({ student_name: studentContext.name, level: studentContext.level, stream: studentContext.stream, percentage: pct })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || 'Analysis failed');
 
-            studentContext.weak_subjects = data.weak_subjects;
-            lastScores = subjectScores; lastWeak = data.weak_subjects; lastAvg = data.average_score;
+            lastAvg = data.average_score;
 
             document.getElementById('result').innerHTML = `
-                <p style="text-align:center; font-size:0.8rem; color:#7f8c8d;">📄 ${studentContext.name} • ${studentContext.board} • ${studentContext.student_class}</p>
+                <p style="text-align:center; font-size:0.85rem; color:#7f8c8d;">📄 ${studentContext.name} • ${studentContext.level} • ${studentContext.stream}</p>
+                <div class="big-score" style="color:${pct >= 75 ? '#27ae60' : pct >= 60 ? '#f39c12' : '#e74c3c'};">${data.average_score}%</div>
                 <h3 style="text-align:center;">🎯 ${data.performance_level}</h3>
-                <p style="text-align:center;"><strong>Avg:</strong> ${data.average_score}% • <strong>Confidence:</strong> ${data.confidence}%</p>
+                <p style="text-align:center; font-size:0.85rem; color:#7f8c8d;">AI confidence: ${data.confidence}%</p>
                 <ul>${data.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>`;
-
-            const rctx = document.getElementById('radarChart').getContext('2d');
-            if (myRadar) myRadar.destroy();
-            myRadar = new Chart(rctx, { type: 'radar', data: { labels: Object.keys(subjectScores), datasets: [{ label: studentContext.name, data: Object.values(subjectScores), backgroundColor: 'rgba(52,152,219,0.2)', borderColor: '#3498db' }] }, options: { responsive: true, scales: { r: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
 
             document.getElementById('career-list').innerHTML = (data.careers || []).map(c => `
                 <div style="border:1px solid #d4e6f1; border-radius:8px; padding:10px; margin-top:10px; background:#f8fbff;">
@@ -408,59 +331,26 @@
                     <ul style="margin:6px 0 0 0; padding-left:1.2rem; font-size:0.85rem; color:#555;">
                         ${c.roles.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
                     </ul>
-                </div>`).join('') || '<p>Analyze to see careers.</p>';
-
-            aiTimetable = data.timetable;
-            currentTimetable = data.timetable.map(d => ({ day: d.day, tasks: d.tasks.map(t => typeof t === 'string' ? { text: t, done: false } : t) }));
+                </div>`).join('');
 
             document.getElementById('dashboard').style.display = 'block';
-            if (data.performance_level === 'Excellent') { confetti(); playSound('success'); }
-            else playSound('correct');
+            if (pct >= 85) { confetti(); playSound('success'); } else playSound('correct');
             buildSubjectSelects();
-            renderTodayPlan(); renderWeak(); renderTimetable();
-            // Auto-check abroad eligibility
+            renderWeak();
             checkAbroad();
             document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth' });
         } catch (err) { alert("Error: " + err.message); }
     }
 
-    function renderTimetable() {
-        document.getElementById('timetable-grid').innerHTML = currentTimetable.map((day, di) => `
-            <div class="day-card"><h4>${day.day}</h4><ul>
-                ${day.tasks.map((t, ti) => `<li class="${t.done?'done-task':''}">
-                    <span class="task-text" onclick="toggleTask(${di},${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span>
-                    <span class="no-print"><button class="mini-btn" onclick="editTask(${di},${ti})">✏️</button><button class="mini-btn" onclick="deleteTask(${di},${ti})">✕</button></span>
-                </li>`).join('')}
-            </ul></div>
-        `).join('');
-    }
-    function toggleTask(di,ti){ currentTimetable[di].tasks[ti].done = !currentTimetable[di].tasks[ti].done; renderTimetable(); renderTodayPlan(); }
-    function editTask(di,ti){ const v = prompt("Edit:", currentTimetable[di].tasks[ti].text); if(v){ currentTimetable[di].tasks[ti].text = v; renderTimetable(); } }
-    function deleteTask(di,ti){ currentTimetable[di].tasks.splice(ti,1); renderTimetable(); }
-
-    function todayName(){ return new Date().toLocaleDateString('en-US', { weekday: 'long' }); }
-    function renderTodayPlan(){
-        document.getElementById('today-label').textContent = todayName();
-        const today = (currentTimetable || []).find(d => d.day === todayName());
-        document.getElementById('today-list').innerHTML = today ? today.tasks.map((t, ti) => `
-            <li class="${t.done?'done-task':''}"><span class="task-text" onclick="toggleToday(${ti})">${t.done?'✅':'⬜'} ${escapeHtml(t.text)}</span></li>`).join('') : '<li>No plan.</li>';
-    }
-    function toggleToday(ti){
-        const today = currentTimetable.find(d => d.day === todayName());
-        today.tasks[ti].done = !today.tasks[ti].done;
-        renderTodayPlan(); renderTimetable();
-    }
-
     function buildSubjectSelects(){
-        const opts = Object.keys(lastScores).map(s => `<option>${escapeHtml(s)}</option>`).join('');
+        const opts = streamSubjects.map(s => `<option>${escapeHtml(s)}</option>`).join('');
         document.getElementById('weak-subject-select').innerHTML = opts;
         document.getElementById('test-subject-select').innerHTML = opts;
         populateChapters(); populateTestChapters();
     }
     function renderWeak(){
-        document.getElementById('weak-subjects').innerHTML = lastWeak.length ? '⚠️ Weak: ' + lastWeak.map(s => `<span class="weak-tag">${s}</span>`).join(' ') : '✅ No weak subjects!';
         const topics = store.get(studentContext.name + '_weaktopics', []);
-        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>Add weak chapters above</li>';
+        document.getElementById('weak-list').innerHTML = topics.map((t,i) => `<li><strong>${escapeHtml(t.subject)}:</strong> ${escapeHtml(t.topic)} <button class="mini-btn" onclick="delWeak(${i})">✕</button></li>`).join('') || '<li>Add your tough chapters above 📖</li>';
     }
     function addWeak(){
         const subj = document.getElementById('weak-subject-select').value;
@@ -472,98 +362,73 @@
     }
     function delWeak(i){ const key = studentContext.name + '_weaktopics'; const t = store.get(key, []); t.splice(i,1); store.set(key,t); renderWeak(); }
 
-    // ---------- 🌍 STUDY ABROAD CHECKER ----------
     async function checkAbroad(){
-        if (!lastAvg) { alert("Please analyze your profile first!"); return; }
+        if (!lastAvg) return;
         const ielts = parseFloat(document.getElementById('ielts_band').value) || 6.5;
         const budget = document.getElementById('budget').value;
         const countries = Array.from(document.querySelectorAll('.country-toggle input:checked')).map(cb => cb.value);
         if (!countries.length) { alert("Select at least one country!"); return; }
 
-        document.getElementById('abroad-result').innerHTML = '<p>🔍 Analyzing your profile against global universities...</p>';
+        document.getElementById('abroad-result').innerHTML = '<p>🔍 Matching you with global universities...</p>';
         try {
             const response = await fetch('/study_abroad', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ student_name: studentContext.name, avg_score: lastAvg, ielts_band: ielts, countries, budget })
+                body: JSON.stringify({ avg_score: lastAvg, ielts_band: ielts, countries, budget })
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.detail);
+            if (!response.ok) throw new Error(data.detail || 'Check failed');
             renderAbroadResult(data);
             if (data.eligibility_score >= 80) { confetti(); playSound('success'); }
-            else playSound('correct');
         } catch (err) {
-            document.getElementById('abroad-result').innerHTML = `<p style="color:#e74c3c;">❌ ${err.message}</p>`;
+            document.getElementById('abroad-result').innerHTML = `<p style="color:#e74c3c;">❌ ${escapeHtml(err.message)}</p>`;
         }
     }
 
     function renderAbroadResult(data){
         const score = data.eligibility_score;
-        let scoreColor = score >= 80 ? '#27ae60' : score >= 60 ? '#f39c12' : '#e74c3c';
-        let scoreLabel = score >= 85 ? 'Excellent — Dream universities open!' : score >= 75 ? 'Good — Strong for Match universities' : score >= 60 ? 'Fair — Safety universities secure' : 'Needs improvement — focus on raising GPA + IELTS';
+        const scoreColor = score >= 80 ? '#27ae60' : score >= 60 ? '#f39c12' : '#e74c3c';
+        const scoreLabel = score >= 85 ? 'Excellent — Dream universities open!' : score >= 75 ? 'Good — Strong for Match universities' : score >= 60 ? 'Fair — Safety universities secure' : 'Needs improvement — raise % + IELTS';
 
         const renderUnis = (list, tier) => {
-            if (!list.length) return `<p style="color:#999; font-size:0.85rem;">No ${tier} universities qualified. ${tier === 'Dream' ? 'Raise your GPA to 85+ and IELTS to 7.0+' : ''}</p>`;
+            if (!list.length) return `<p style="color:#999; font-size:0.85rem;">No ${tier} universities qualified yet.${tier === 'Dream' ? ' Target 85%+ and IELTS 7.0+!' : ''}</p>`;
             return list.map(u => `
                 <div class="uni-card ${tier}">
                     <h4>${u.flag} ${escapeHtml(u.name)} <span class="tier-badge ${tier}">${tier}</span></h4>
-                    <div class="uni-meta">
-                        Min GPA: ${u.min_gpa}% • Min IELTS: ${u.min_ielts} • Cost: ${u.cost} • ${u.country}
-                    </div>
-                </div>
-            `).join('');
+                    <div class="uni-meta">Min: ${u.min_gpa}% • IELTS: ${u.min_ielts} • Cost: ${u.cost} • ${u.country}</div>
+                </div>`).join('');
         };
-
         const renderScholarships = (list) => {
-            if (!list.length) return '<p style="color:#999; font-size:0.85rem;">No scholarships match your profile yet. Target 85% + IELTS 6.5 to unlock top scholarships!</p>';
+            if (!list.length) return '<p style="color:#999; font-size:0.85rem;">No scholarships match yet. Target 85% + IELTS 6.5!</p>';
             return list.map(s => `
                 <div class="scholarship-card">
                     <strong>💰 ${escapeHtml(s.name)}</strong> ${s.flag}<br>
-                    <span style="font-size:0.8rem; color:#666;">${escapeHtml(s.value)} • Min GPA: ${s.min_score}% • ${s.country}</span>
-                </div>
-            `).join('');
+                    <span style="font-size:0.8rem; color:#666;">${escapeHtml(s.value)} • Min: ${s.min_score}% • ${s.country}</span>
+                </div>`).join('');
         };
 
         document.getElementById('abroad-result').innerHTML = `
-            <h3 style="text-align:center; margin-top:1rem;">🎯 Your Eligibility Score</h3>
-            <div class="elig-meter">
-                <div class="elig-fill" style="width:${score}%; background:${scoreColor};">${score}%</div>
-            </div>
+            <h3 style="text-align:center; margin-top:1rem;">🎯 Eligibility Score</h3>
+            <div class="elig-meter"><div class="elig-fill" style="width:${score}%; background:${scoreColor};">${score}%</div></div>
             <p style="text-align:center; color:${scoreColor}; font-weight:bold;">${scoreLabel}</p>
-            <p style="text-align:center; font-size:0.85rem; color:#7f8c8d;">
-                🏫 ${data.total_universities} universities matched • 💰 ${data.scholarships.length} scholarships available
-            </p>
-
-            <h3 style="margin-top:1.5rem;">🌟 Dream Universities (Top Tier)</h3>
-            ${renderUnis(data.dream, 'dream')}
-
-            <h3 style="margin-top:1.2rem;">🎯 Match Universities (Great Fit)</h3>
-            ${renderUnis(data.match, 'match')}
-
-            <h3 style="margin-top:1.2rem;">✅ Safety Universities (Secure Options)</h3>
-            ${renderUnis(data.safety, 'safety')}
-
-            <h3 style="margin-top:1.5rem;">💰 Scholarships You Qualify For</h3>
-            ${renderScholarships(data.scholarships)}
-
-            <h3 style="margin-top:1.5rem;">📋 Your Next Steps</h3>
-            <ol style="font-size:0.9rem; color:#555;">
-                ${data.next_steps.map(s => `<li style="padding:6px 0;">${s}</li>`).join('')}
-            </ol>
+            <p style="text-align:center; font-size:0.85rem; color:#7f8c8d;">🏫 ${data.total_universities} universities • 💰 ${data.scholarships.length} scholarships</p>
+            <h3 style="margin-top:1.5rem;">🌟 Dream Universities</h3>${renderUnis(data.dream, 'dream')}
+            <h3 style="margin-top:1.2rem;">🎯 Match Universities</h3>${renderUnis(data.match, 'match')}
+            <h3 style="margin-top:1.2rem;">✅ Safety Universities</h3>${renderUnis(data.safety, 'safety')}
+            <h3 style="margin-top:1.5rem;">💰 Scholarships</h3>${renderScholarships(data.scholarships)}
+            <h3 style="margin-top:1.5rem;">📋 Next Steps</h3>
+            <ol style="font-size:0.9rem; color:#555;">${data.next_steps.map(s => `<li style="padding:6px 0;">${s}</li>`).join('')}</ol>
         `;
     }
 
     function startQuiz(){
-        if (!Object.keys(lastScores).length) { alert("Analyze first!"); return; }
-        const weakest = Object.keys(lastScores).sort((a,b) => lastScores[a]-lastScores[b]).slice(0,3);
         quizData = [];
-        weakest.forEach(s => quizFor(s).forEach(q => quizData.push({...q, subject: s})));
+        streamSubjects.slice(0,3).forEach(s => quizFor(s).forEach(q => quizData.push({...q, subject: s})));
         document.getElementById('quiz-result').innerHTML = '';
         renderQuiz("🚀 Quick Quiz");
     }
     async function startWeakTest(){
         const topics = store.get(studentContext.name + '_weaktopics', []);
         let items = topics.map(t => ({subject: t.subject, topic: t.topic}));
-        if (!items.length) items = lastWeak.map(s => ({subject: s, topic: "full syllabus"}));
         if (!items.length) { alert("Add weak chapters first!"); return; }
         await runTest(items, null);
     }
@@ -574,19 +439,18 @@
         await runTest([{subject: subj, topic: chapter}], chapter);
     }
     async function runTest(items, chapterTitle){
-        document.getElementById('quiz-area').innerHTML = '<p>🤖 Generating test...</p>';
+        document.getElementById('quiz-area').innerHTML = '<p>🤖 Generating test... wait ~10 seconds.</p>';
         try {
             const response = await fetch('/generate_test', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ board: studentContext.board, student_class: studentContext.student_class, items })
+                body: JSON.stringify({ student_class: studentContext.level, items })
             });
             const data = await response.json();
             if (!data.questions) throw new Error('no questions');
             quizData = data.questions.filter(q => q && q.q && Array.isArray(q.a) && q.a.length === 4);
             if (!quizData.length) throw new Error('invalid');
-            const title = chapterTitle ? `📚 ${escapeHtml(chapterTitle)}` : '🎯 AI Test';
-            renderQuiz(title);
-        } catch (err) { document.getElementById('quiz-area').innerHTML = '<p>❌ Try Quick Quiz!</p>'; }
+            renderQuiz(chapterTitle ? `📚 ${escapeHtml(chapterTitle)}` : '🎯 AI Test');
+        } catch (err) { document.getElementById('quiz-area').innerHTML = '<p>❌ Could not generate. Try Quick Quiz!</p>'; }
     }
     function renderQuiz(title){
         document.getElementById('quiz-area').innerHTML = `<h3>${title}</h3>` + quizData.map((q,i) => `
@@ -617,7 +481,7 @@
         input.value = ''; box.scrollTop = box.scrollHeight;
         const rm = () => { const t = document.getElementById('thinking'); if (t) t.remove(); };
         try {
-            const response = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, board: studentContext.board, student_class: studentContext.student_class, stream: studentContext.stream, weak_subjects: studentContext.weak_subjects }) });
+            const response = await fetch('/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, student_class: studentContext.level, stream: studentContext.stream, weak_subjects: studentContext.weak_subjects }) });
             const text = await response.text();
             let data = null; try { data = JSON.parse(text); } catch(e) {}
             rm();

@@ -13,7 +13,7 @@ import requests
 import time
 from database import SessionLocal, StudentRecord, init_db
 
-app = FastAPI(title="AI Student Analyzer & Study Abroad Platform")
+app = FastAPI(title="AI Study Abroad Platform")
 init_db()
 
 MODEL_PATH = "student_model.pkl"
@@ -35,26 +35,12 @@ GEMINI_MODELS = ["gemini-2.6-flash", "gemini-2.6-flash-lite", "gemini-flash-late
                  "gemini-flash-lite-latest", "gemini-2.5-flash-lite", "gemini-2.5-flash",
                  "gemini-2.0-flash-lite", "gemini-2.0-flash"]
 
-EMOJIS = {
-    "Math": "📐", "Science": "🔬", "English": "📚", "Hindi": "🖋️",
-    "Social Studies": "🌍", "Physics": "⚛️", "Chemistry": "🧪",
-    "Computer Science": "💻", "Computer Applications": "💻",
-    "Marathi": "📖", "Accountancy": "🧾", "Business Studies": "💼",
-    "Economics": "📈", "History": "🏛️", "Political Science": "🗳️",
-    "Geography": "🗺️"
-}
-
-def emoji_for(subject):
-    return EMOJIS.get(subject, "📘")
-
 class StudentInput(BaseModel):
     student_name: str = "Student"
-    board: str
-    student_class: str
-    stream: str = "None"
-    study_hours: float
-    start_time: str = "16:00"
-    subject_scores: Dict[str, float]
+    level: str = "Class 12"       # "Class 12" or "Graduation"
+    stream: str = "Science"
+    percentage: float
+    study_hours: float = 20
 
 class DoubtInput(BaseModel):
     question: str
@@ -67,13 +53,6 @@ class TestGenInput(BaseModel):
     board: str = ""
     student_class: str = ""
     items: List[Dict[str, str]] = []
-
-class AbroadInput(BaseModel):
-    student_name: str = "Student"
-    avg_score: float
-    ielts_band: float = 6.5
-    countries: List[str] = ["UK", "USA", "Canada", "Australia", "Germany"]
-    budget: str = "medium"  # low / medium / high
 
 # ---------- SELF-HEALING GEMINI ----------
 def gemini_answer(prompt):
@@ -121,12 +100,11 @@ def eval_expr(expr):
     return _eval(ast.parse(expr, mode='eval').body)
 
 CANNED = {
-    "photosynthesis": "🔬 Photosynthesis is how green plants make food using sunlight, water and CO2, releasing oxygen. Equation: 6CO2 + 6H2O + sunlight → C6H12O6 + 6O2. It happens in chloroplasts containing chlorophyll.",
-    "gravity": "⚛️ Gravity is the force that pulls objects toward each other. Earth's gravity pulls everything toward its center with acceleration ~9.8 m/s². That's why apples fall down!",
-    "noun": "📚 A noun is a naming word — person (teacher), place (Delhi), thing (book), or idea (happiness). Example: 'Riya went to school.' → Riya and school are nouns.",
-    "fraction": "📐 A fraction represents a part of a whole, written as numerator/denominator (e.g., 3/4 = 3 parts out of 4). To add fractions, make denominators equal first!",
-    "percentage": "📐 Percentage means 'per 100'. Formula: (Part ÷ Whole) × 100. Example: 45/60 = 0.75 → 75%.",
-    "evaporation": "🔬 Evaporation is when liquid water turns into vapor due to heat. Example: puddles drying in the sun. It's part of the water cycle!",
+    "photosynthesis": "🔬 Photosynthesis is how green plants make food using sunlight, water and CO2, releasing oxygen. Equation: 6CO2 + 6H2O + sunlight → C6H12O6 + 6O2.",
+    "gravity": "⚛️ Gravity pulls objects toward each other with acceleration ~9.8 m/s² on Earth.",
+    "noun": "📚 A noun is a naming word — person, place, thing or idea. Example: 'Riya went to school.'",
+    "fraction": "📐 A fraction = part/whole (e.g., 3/4). Make denominators equal before adding!",
+    "percentage": "📐 Percentage = (Part ÷ Whole) × 100. Example: 45/60 = 75%.",
 }
 
 def fallback_tutor(q):
@@ -138,7 +116,7 @@ def fallback_tutor(q):
             if len(part) >= 3:
                 try:
                     val = eval_expr(part)
-                    return f"📐 Calculation: {part} = {round(val, 4)}\n\nTip: Follow BODMAS order."
+                    return f"📐 Calculation: {part} = {round(val, 4)}"
                 except Exception:
                     continue
     ql = q.lower()
@@ -149,13 +127,13 @@ def fallback_tutor(q):
 
 @app.post("/ask")
 async def ask(data: DoubtInput):
-    context = (f"Student profile: {data.board} {data.student_class}, stream: {data.stream}, "
+    context = (f"Student profile: {data.student_class}, stream: {data.stream}, "
                f"weak subjects: {', '.join(data.weak_subjects) if data.weak_subjects else 'none'}.")
     ql = data.question.lower()
     wants_chapter = any(w in ql for w in ["chapter", "notes", "summary", "text of", "full topic"])
     if wants_chapter:
         prompt = (f"You are a friendly personal tutor. {context} Provide a study summary with: "
-                  f"1) Chapter overview 2) Key concepts 3) Formulas 4) One solved example 5) Revision tips. Under 500 words.\n\n"
+                  f"1) Overview 2) Key concepts 3) Formulas 4) One solved example 5) Revision tips. Under 500 words.\n\n"
                   f"Student request: {data.question}")
     else:
         prompt = (f"You are a friendly personal tutor. {context} Explain simply with one example. Under 200 words.\n\n"
@@ -184,11 +162,9 @@ SERVER_QUIZ = {
     "English": [
         {"q": "Synonym of 'Happy'?", "a": ["Sad","Joyful","Angry","Tired"], "c": 1},
         {"q": "Plural of 'Child'?", "a": ["Childs","Children","Childes","Child"], "c": 1},
-        {"q": "Past tense of 'Go'?", "a": ["Goed","Went","Gone","Going"], "c": 1},
     ],
     "Social": [
         {"q": "First PM of India?", "a": ["Nehru","Gandhi","Patel","Rajendra Prasad"], "c": 0},
-        {"q": "Longest river in India?", "a": ["Yamuna","Ganga","Godavari","Brahmaputra"], "c": 1},
         {"q": "Taj Mahal is in?", "a": ["Delhi","Jaipur","Agra","Lucknow"], "c": 2},
     ]
 }
@@ -203,7 +179,7 @@ def server_quiz_for(subject):
 async def generate_test(data: TestGenInput):
     if data.items:
         topics_txt = "; ".join(f"{i.get('subject','')}: {i.get('topic','')}" for i in data.items[:6])
-        prompt = (f"You are an expert teacher for {data.board} {data.student_class}. "
+        prompt = (f"You are an expert teacher for {data.student_class}. "
                   f"Create exactly 5 multiple-choice questions on these topics: {topics_txt}. "
                   f"Respond ONLY with a JSON array: "
                   f'[{{"subject":"Math","q":"...","a":["a","b","c","d"],"c":0}}]')
@@ -223,45 +199,35 @@ async def generate_test(data: TestGenInput):
         questions += [{**q, "subject": s} for q in server_quiz_for(s)][:3]
     return {"questions": questions, "source": "offline"}
 
-# ---------- CAREER GUIDANCE ----------
-CAREER_TRACKS = {
-    "Engineering & Technology": ["Physics", "Math"],
-    "Software, IT & AI": ["Computer Science", "Computer Applications", "Math"],
-    "Medical & Healthcare": ["Biology", "Chemistry", "Science"],
-    "Pure Science & Research": ["Physics", "Chemistry", "Science"],
-    "Data Science & Statistics": ["Math", "Economics"],
-    "Commerce, Finance & CA": ["Accountancy", "Business Studies", "Economics"],
-    "Business & Management": ["Business Studies", "Economics", "English"],
-    "Law, Civil Services & Administration": ["Political Science", "History", "Social Studies"],
-    "Humanities, Teaching & Psychology": ["History", "Geography", "Hindi"],
-    "Media, Writing & Languages": ["English", "Hindi", "Marathi"],
-    "Design, Arts & Creativity": ["English", "Social Studies", "Science"],
+# ---------- 🎓 CAREER ENGINE (stream-based) ----------
+STREAM_CAREERS = {
+    "Science": [
+        {"track": "Engineering & Technology", "roles": ["Mechanical / Civil / Computer Engineer", "Robotics Specialist", "ISRO / DRDO Scientist"]},
+        {"track": "Software, IT & AI", "roles": ["Software Developer", "AI / ML Engineer", "Cybersecurity Expert"]},
+        {"track": "Medical & Healthcare", "roles": ["Doctor (MBBS)", "Pharmacist", "Biotech Scientist"]},
+    ],
+    "Commerce": [
+        {"track": "Commerce, Finance & CA", "roles": ["Chartered Accountant (CA)", "Investment Banker", "Financial Advisor"]},
+        {"track": "Business & Management", "roles": ["Entrepreneur", "Marketing Manager", "HR Manager"]},
+        {"track": "Data Science & Statistics", "roles": ["Data Scientist", "Statistician", "Business Analyst"]},
+    ],
+    "Arts": [
+        {"track": "Law, Civil Services & Administration", "roles": ["IAS / IPS Officer", "Lawyer / Judge", "Policy Analyst"]},
+        {"track": "Humanities, Teaching & Psychology", "roles": ["Teacher / Professor", "Psychologist", "NGO Leader"]},
+        {"track": "Media, Writing & Languages", "roles": ["Journalist", "Content Writer", "Translator"]},
+    ],
 }
 
-CAREER_ROLES = {
-    "Engineering & Technology": ["Mechanical / Civil Engineer", "Robotics Specialist", "ISRO / DRDO Scientist"],
-    "Software, IT & AI": ["Software Developer", "AI / ML Engineer", "Cybersecurity Expert"],
-    "Medical & Healthcare": ["Doctor (MBBS)", "Pharmacist", "Biotech Scientist"],
-    "Pure Science & Research": ["Research Scientist", "Astrophysicist", "Lab Specialist"],
-    "Data Science & Statistics": ["Data Scientist", "Statistician", "Business Analyst"],
-    "Commerce, Finance & CA": ["Chartered Accountant", "Investment Banker", "Financial Advisor"],
-    "Business & Management": ["Entrepreneur", "Marketing Manager", "HR Manager"],
-    "Law, Civil Services & Administration": ["IAS / IPS Officer", "Lawyer / Judge", "Policy Analyst"],
-    "Humanities, Teaching & Psychology": ["Teacher / Professor", "Psychologist", "NGO Leader"],
-    "Media, Writing & Languages": ["Journalist", "Content Writer", "Translator"],
-    "Design, Arts & Creativity": ["Graphic / UI Designer", "Animator", "Architect"],
-}
+GRAD_CAREERS = [
+    {"track": "Higher Studies (Masters / PhD)", "roles": ["Research Scholar", "University Lecturer", "Scientist"]},
+    {"track": "Government Exams", "roles": ["UPSC Civil Services", "SSC / Banking", "PSU Jobs"]},
+    {"track": "Software, IT & AI", "roles": ["Software Developer", "Data Analyst", "AI/ML Engineer"]},
+]
 
-def suggest_careers(subject_scores):
-    results = []
-    for track, subjects in CAREER_TRACKS.items():
-        present = [s for s in subjects if s in subject_scores]
-        if not present:
-            continue
-        avg = sum(subject_scores[s] for s in present) / len(present)
-        results.append({"track": track, "roles": CAREER_ROLES[track], "match": round(avg)})
-    results.sort(key=lambda x: x["match"], reverse=True)
-    return results[:3]
+def suggest_careers_stream(stream, level, pct):
+    base = STREAM_CAREERS.get(stream, STREAM_CAREERS["Science"])
+    items = (GRAD_CAREERS + base[:1]) if level == "Graduation" else base
+    return [{"track": c["track"], "roles": c["roles"], "match": round(pct)} for c in items[:3]]
 
 # ---------- 🌍 STUDY ABROAD ENGINE ----------
 UNIVERSITIES = {
@@ -284,7 +250,7 @@ UNIVERSITIES = {
         ],
     },
     "USA": {
-        "flag": "🇺🇸",
+        "flag": "🇺",
         "dream": [
             {"name": "MIT", "min_gpa": 95, "min_ielts": 7.5, "cost": "high"},
             {"name": "Stanford University", "min_gpa": 93, "min_ielts": 7.5, "cost": "high"},
@@ -388,61 +354,37 @@ SCHOLARSHIPS = {
 def check_abroad_eligibility(avg_score, ielts_band, countries, budget):
     budget_order = {"low": 1, "medium": 2, "high": 3}
     user_budget = budget_order.get(budget, 2)
-    
-    # Overall eligibility score (weighted)
     score_part = min(avg_score, 100) * 0.5
     ielts_part = min(ielts_band, 9) * 5 * 0.3
     profile_part = min(avg_score * 0.2, 20)
     eligibility = round(min(score_part + ielts_part + profile_part, 100))
-    
-    # University matches by tier
-    dream_unis, match_unis, safety_unis = [], [], []
-    all_scholarships = []
-    
+    dream_unis, match_unis, safety_unis, all_scholarships = [], [], [], []
     for country in countries:
         if country not in UNIVERSITIES:
             continue
         data = UNIVERSITIES[country]
         flag = data["flag"]
-        
-        # Dream: top 2 that qualify
-        qualified_dream = [u for u in data["dream"]
-                           if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]
-                           and budget_order.get(u["cost"], 2) <= user_budget]
-        dream_unis.extend([{"country": country, "flag": flag, "tier": "Dream", **u} for u in qualified_dream[:2]])
-        
-        # Match: top 2
-        qualified_match = [u for u in data["match"]
-                           if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]
-                           and budget_order.get(u["cost"], 2) <= user_budget]
-        match_unis.extend([{"country": country, "flag": flag, "tier": "Match", **u} for u in qualified_match[:2]])
-        
-        # Safety: top 2
-        qualified_safety = [u for u in data["safety"]
-                            if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]]
-        safety_unis.extend([{"country": country, "flag": flag, "tier": "Safety", **u} for u in qualified_safety[:2]])
-        
-        # Scholarships
+        qd = [u for u in data["dream"] if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"] and budget_order.get(u["cost"], 2) <= user_budget]
+        dream_unis.extend([{"country": country, "flag": flag, "tier": "Dream", **u} for u in qd[:2]])
+        qm = [u for u in data["match"] if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"] and budget_order.get(u["cost"], 2) <= user_budget]
+        match_unis.extend([{"country": country, "flag": flag, "tier": "Match", **u} for u in qm[:2]])
+        qs = [u for u in data["safety"] if avg_score >= u["min_gpa"] and ielts_band >= u["min_ielts"]]
+        safety_unis.extend([{"country": country, "flag": flag, "tier": "Safety", **u} for u in qs[:2]])
         for s in SCHOLARSHIPS.get(country, []):
             if avg_score >= s["min_score"] and ielts_band >= s["min_ielts"]:
                 all_scholarships.append({"country": country, "flag": flag, **s})
-    
-    # Next steps based on profile
     next_steps = []
     if ielts_band < 7.0:
         next_steps.append("📚 Prepare for IELTS — aim for 7.0+ to unlock top universities")
     if avg_score < 85:
-        next_steps.append("📈 Focus on raising your GPA to 85+ for Dream-tier universities")
-    if not dream_unis:
-        next_steps.append("🎯 Your profile qualifies for Match universities — strengthen it for Dream schools")
+        next_steps.append("📈 Raise your percentage to 85+ for Dream-tier universities")
     next_steps.extend([
-        "✍️ Start writing your Statement of Purpose (SOP) — takes 2-3 weeks",
-        "📨 Request 2 Letters of Recommendation from teachers",
-        "💳 Prepare for visa documentation (bank statements, passport)",
+        "✍️ Write your Statement of Purpose (SOP) — takes 2-3 weeks",
+        "📨 Request 2 Letters of Recommendation",
+        "💳 Prepare visa documents (bank statements, passport)",
     ])
     if all_scholarships:
-        next_steps.append(f"💰 Apply for {len(all_scholarships)} scholarships you qualify for!")
-    
+        next_steps.append(f"💰 Apply for the {len(all_scholarships)} scholarships you qualify for!")
     return {
         "eligibility_score": eligibility,
         "dream": dream_unis,
@@ -454,12 +396,14 @@ def check_abroad_eligibility(avg_score, ielts_band, countries, budget):
     }
 
 @app.post("/study_abroad")
-async def study_abroad(data: AbroadInput):
+async def study_abroad(data: Dict):
     try:
-        result = check_abroad_eligibility(
-            data.avg_score, data.ielts_band, data.countries, data.budget
+        return check_abroad_eligibility(
+            float(data.get("avg_score", 0)),
+            float(data.get("ielts_band", 6.5)),
+            data.get("countries", []),
+            data.get("budget", "medium")
         )
-        return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -481,119 +425,51 @@ async def privacy():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>Not found</h1>", status_code=404)
 
-def get_advice(subject, score):
-    e = emoji_for(subject)
-    if score < 40:
-        return f"{e} {subject} Critical: start from basics. Watch video lectures daily + solve NCERT examples"
-    if score < 60:
-        return f"{e} {subject} Weak: practice 30–45 mins daily, revise notes and solve exercises"
-    if score < 75:
-        return f"{e} {subject} Moderate: solve previous year papers and focus on tricky topics"
-    return None
-
-def add_minutes(h, m, mins):
-    total = h * 60 + m + int(mins)
-    return (total // 60) % 24, total % 60
-
-def fmt_time(h, m):
-    suffix = "AM" if h < 12 else "PM"
-    h12 = h % 12
-    if h12 == 0: h12 = 12
-    return f"{h12}:{m:02d} {suffix}"
-
-def activity_for(score):
-    if score < 40: return "Concept building: video lecture + NCERT reading"
-    if score < 60: return "Solved examples + exercise questions"
-    if score < 75: return "Practice set + previous year questions"
-    return "Advanced questions + speed revision"
-
-def generate_timetable(study_hours, subject_scores, start_time="16:00"):
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    total_gap = sum(max(0, 100 - s) for s in subject_scores.values())
-    if total_gap == 0:
-        weights = {s: 1/len(subject_scores) for s in subject_scores}
-    else:
-        weights = {s: max(0, 100 - sc) / total_gap for s, sc in subject_scores.items()}
-    ordered = sorted(subject_scores.keys(), key=lambda s: subject_scores[s])
-    weakest = ordered[0]
-    try:
-        sh, sm = [int(x) for x in start_time.split(":")]
-    except Exception:
-        sh, sm = 16, 0
-    daily_minutes = (study_hours * 60) / 6.0
-    timetable = []
-    for i, day in enumerate(days):
-        tasks = []
-        h, m = sh, sm
-        if day == "Sunday":
-            tasks.append(f"📝 {fmt_time(h, m)} – Weekly Mock Test: {weakest} (60 min)")
-            h, m = add_minutes(h, m, 70)
-            tasks.append(f"🔁 {fmt_time(h, m)} – Review mistakes (30 min)")
-            tasks.append(f"🧘 {fmt_time(h, m)} – Rest & light reading")
-        else:
-            order = ordered[i % len(ordered):] + ordered[:i % len(ordered)]
-            for idx, subj in enumerate(order):
-                mins = int(round(daily_minutes * weights[subj] / 5) * 5)
-                if mins < 20: continue
-                eh, em = add_minutes(h, m, mins)
-                tasks.append(f"{emoji_for(subj)} {fmt_time(h, m)}–{fmt_time(eh, em)} {subj}: {activity_for(subject_scores[subj])} ({mins} min)")
-                if idx < len(order) - 1:
-                    tasks.append(f"☕ {fmt_time(eh, em)} – Break (10 min)")
-                h, m = add_minutes(eh, em, 10)
-            tasks.append("✏️ Homework / Assignments")
-            tasks.append(f"🎯 Night: revise {weakest} for 10 min")
-        timetable.append({"day": day, "tasks": tasks})
-    return timetable
-
 @app.post("/predict")
 async def predict(data: StudentInput):
     if model is None:
         raise HTTPException(status_code=500, detail="Model failed to load")
     try:
-        scores = list(data.subject_scores.values())
-        if not scores:
-            raise ValueError("No subject scores provided")
-        class_num = int(data.student_class.replace("Class ", ""))
-        avg = sum(scores) / len(scores)
-        mn = min(scores)
-        mx = max(scores)
-        features = np.array([[class_num, data.study_hours, avg, mn, mx]])
+        pct = data.percentage
+        class_num = 12 if data.level == "Class 12" else 13
+        features = np.array([[class_num, data.study_hours, pct, pct, pct]])
         prediction = model.predict(features)[0]
         confidence = float(max(model.predict_proba(features)[0]))
-        weak_subjects = [s for s, sc in data.subject_scores.items() if sc < 75]
+
         recommendations = []
-        for subj, sc in sorted(data.subject_scores.items(), key=lambda x: x[1]):
-            advice = get_advice(subj, sc)
-            if advice: recommendations.append(advice)
-        if data.study_hours < 14:
-            recommendations.append("⏰ Low study hours! Aim for 2-3 hours/day")
-        if not weak_subjects:
-            recommendations.append("🌟 Excellent scores! Focus on advanced problems")
-        timetable = generate_timetable(data.study_hours, data.subject_scores, data.start_time)
+        if pct >= 85:
+            recommendations.append("🌟 Excellent! Target top universities & competitive exams")
+        elif pct >= 75:
+            recommendations.append("👍 Good score! Push to 85+ for Dream universities")
+        elif pct >= 60:
+            recommendations.append("📚 Solid base — focus on weak areas to cross 75%")
+        else:
+            recommendations.append("💪 Focus on concept building — daily practice will raise your score fast")
+
         db = SessionLocal()
         try:
             record = StudentRecord(
                 student_name=data.student_name,
-                board=data.board,
-                student_class=data.student_class,
+                board=data.level,
+                student_class=data.level,
                 stream=data.stream,
                 study_hours=data.study_hours,
-                avg_score=round(avg, 1),
-                subject_scores=json.dumps(data.subject_scores),
+                avg_score=round(pct, 1),
+                subject_scores=json.dumps({"Overall": pct}),
                 performance_level=prediction
             )
             db.add(record)
             db.commit()
         finally:
             db.close()
+
         return {
             "performance_level": prediction,
             "confidence": round(confidence * 100, 1),
-            "average_score": round(avg, 1),
-            "weak_subjects": weak_subjects,
+            "average_score": round(pct, 1),
+            "weak_subjects": [],
             "recommendations": recommendations,
-            "timetable": timetable,
-            "careers": suggest_careers(data.subject_scores)
+            "careers": suggest_careers_stream(data.stream, data.level, pct)
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -607,25 +483,6 @@ async def get_history():
             "timestamp": r.timestamp.isoformat(),
             "student_class": r.student_class,
             "avg_score": r.avg_score
-        } for r in records]
-    finally:
-        db.close()
-
-@app.get("/records")
-async def get_records():
-    db = SessionLocal()
-    try:
-        records = db.query(StudentRecord).order_by(StudentRecord.timestamp.desc()).limit(100).all()
-        return [{
-            "timestamp": r.timestamp.isoformat(),
-            "student_name": r.student_name,
-            "board": r.board,
-            "student_class": r.student_class,
-            "stream": r.stream,
-            "study_hours": r.study_hours,
-            "avg_score": r.avg_score,
-            "subject_scores": json.loads(r.subject_scores),
-            "performance_level": r.performance_level
         } for r in records]
     finally:
         db.close()
